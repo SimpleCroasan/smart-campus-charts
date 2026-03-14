@@ -1,0 +1,23 @@
+# Credenciales más seguras para producción
+postgres:
+  password: "PgProd$2024!Secure"
+
+mongo:
+  password: "MongoProd$2024!Secure"
+
+influxdb:
+  password: "InfluxProd$2024!Secure"
+  token: "token-seguro-de-produccion"
+
+minio:
+  rootPassword: "MinioProd$2024!Secure"
+
+rabbitmq:
+  password: "RabbitProd$2024!Secure"
+
+# En prod las imágenes tienen tag fijo, no latest
+dataService:
+  tag: v1.0.0
+
+adminService:
+  tag: v1.0.0

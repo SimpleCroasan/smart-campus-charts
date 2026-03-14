@@ -1,0 +1,26 @@
+# ── Perfil personalizado ──────────────────────────────────────────
+# Cambia true/false según lo que necesites levantar
+
+postgres:
+  enabled: true
+
+mongo:
+  enabled: true
+
+influxdb:
+  enabled: true
+
+minio:
+  enabled: true
+
+rabbitmq:
+  enabled: true
+
+emqx:
+  enabled: true
+
+dataService:
+  enabled: true
+
+adminService:
+  enabled: true

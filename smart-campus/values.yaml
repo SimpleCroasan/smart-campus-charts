@@ -1,0 +1,44 @@
+# ── Credenciales ──────────────────────────────────────────────────
+postgres:
+  enabled: true
+  user: postgres
+  password: IoTPass1234
+  db: iot
+
+mongo:
+  enabled: true
+  username: root
+  password: password
+  database: iot
+
+influxdb:
+  enabled: true
+  user: admin
+  password: admin1234
+  org: smart-campus
+  bucket: messages
+  token: "8_kiyghJzhqlZENCLnTbc-90hkNfq1U5DS4pRCdMPQdhLY48LW33hsM73nQl1zs_sLVc5IPvJNWsUHZHimZfJw=="
+
+minio:
+  enabled: true
+  rootUser: admin
+  rootPassword: password
+
+rabbitmq:
+  enabled: true
+  username: admin
+  password: password
+
+emqx:
+  enabled: true
+
+# ── Imágenes locales ──────────────────────────────────────────────
+dataService:
+  enabled: true
+  image: data-service
+  tag: latest
+
+adminService:
+  enabled: true
+  image: admin-service
+  tag: latest

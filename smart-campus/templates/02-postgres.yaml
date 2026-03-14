@@ -1,0 +1,112 @@
+---
+# ─── Service Headless ────────────────────────────────────────────────────────
+# Un StatefulSet requiere un Service headless (clusterIP: None) para gestionar
+# la identidad de red estable de cada pod. Este Service no balancea carga,
+# solo provee DNS estable: postgres-0.postgres.smart-campus.svc.cluster.local
+# Es el mecanismo que permite la replicación futura entre instancias.
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: smart-campus
+  labels:
+    app: postgres
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+# ─── StatefulSet ─────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: smart-campus
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres   # debe coincidir con el nombre del Service headless
+  replicas: 1             # una sola réplica por ahora — escalar implica
+                          # configurar replicación en PostgreSQL, no solo subir este número
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRESQL_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRESQL_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: POSTGRESQL_DB
+            # PGDATA apunta a un subdirectorio dentro del volumen montado.
+            # PostgreSQL requiere que el directorio de datos esté vacío al inicializar,
+            # pero el punto de montaje raíz del volumen puede contener archivos del sistema.
+            # Usar un subdirectorio evita errores de inicialización.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+  # volumeClaimTemplates crea y nombra el PVC automáticamente por pod.
+  # El PVC resultante se llamará: postgres-data-postgres-0
+  # Al borrar el StatefulSet, este PVC NO se borra — los datos persisten.
+  # Para borrar los datos hay que eliminar el PVC manualmente.
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+{{- end }}

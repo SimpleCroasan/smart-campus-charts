@@ -1,0 +1,16 @@
+# ── Prioridad ─────────────────────────────────────────────────────
+# true  — baja prioridad, se apaga primero si faltan recursos
+# false — prioridad normal, útil para pruebas de estrés
+# ── Prioridad ─────────────────────────────────────────────────────
+observability:
+  lowPriority: true
+
+# ── Componentes ───────────────────────────────────────────────────
+grafana:
+  enabled: true
+
+loki:
+  lokiCanary:
+    enabled: false
+  test:
+    enabled: false

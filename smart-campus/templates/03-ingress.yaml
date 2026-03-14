@@ -1,0 +1,57 @@
+---
+# ─── Ingress ──────────────────────────────────────────────────────────────────
+# Reemplaza el go_gateway. Traefik (incluido en k3s) enruta el tráfico externo
+# hacia los microservicios según el path, eliminando el prefijo antes de
+# redirigir — mismo comportamiento que el proxy en Go.
+#
+# ─── Middleware strip /admin ──────────────────────────────────────────────────
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-admin
+  namespace: smart-campus
+spec:
+  stripPrefix:
+    prefixes:
+      - /admin
+
+---
+# ─── Middleware strip /data ───────────────────────────────────────────────────
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-data
+  namespace: smart-campus
+spec:
+  stripPrefix:
+    prefixes:
+      - /data
+
+---
+# ─── IngressRoute (Traefik CRD) ───────────────────────────────────────────────
+# Se usa IngressRoute en lugar de Ingress estándar porque el strip de prefijo
+# por ruta requiere asociar middlewares distintos a cada path — algo que el
+# Ingress estándar no soporta directamente con Traefik.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: smart-campus
+  namespace: smart-campus
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/admin`)
+      kind: Rule
+      middlewares:
+        - name: strip-admin
+      services:
+        - name: admin
+          port: 8081
+    - match: PathPrefix(`/data`)
+      kind: Rule
+      middlewares:
+        - name: strip-data
+      services:
+        - name: data
+          port: 8082

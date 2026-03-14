@@ -1,0 +1,121 @@
+---
+# ─── Service Headless ────────────────────────────────────────────────────────
+{{- if .Values.influxdb.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb
+  namespace: smart-campus
+  labels:
+    app: influxdb
+spec:
+  clusterIP: None
+  selector:
+    app: influxdb
+  ports:
+    - port: 8086
+      targetPort: 8086
+
+---
+# ─── StatefulSet ─────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: influxdb
+  namespace: smart-campus
+  labels:
+    app: influxdb
+spec:
+  serviceName: influxdb
+  replicas: 1             # InfluxDB OSS (versión gratuita) no soporta clustering.
+                          # El clustering existe solo en InfluxDB Enterprise (pago).
+                          # Se mantiene StatefulSet por consistencia arquitectural
+                          # y para facilitar una eventual migración a Enterprise.
+  selector:
+    matchLabels:
+      app: influxdb
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      containers:
+        - name: influxdb
+          image: influxdb:2.7.11
+          ports:
+            - containerPort: 8086
+          env:
+            - name: DOCKER_INFLUXDB_INIT_MODE
+              value: setup
+            - name: DOCKER_INFLUXDB_INIT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_USER
+            - name: DOCKER_INFLUXDB_INIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_PASSWORD
+            - name: DOCKER_INFLUXDB_INIT_ORG
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_ORG
+            - name: DOCKER_INFLUXDB_INIT_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_BUCKET
+            - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_TOKEN
+          volumeMounts:
+            - name: influxdb-data
+              mountPath: /var/lib/influxdb2
+            - name: influxdb-config
+              mountPath: /etc/influxdb2
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8086
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8086
+            initialDelaySeconds: 20
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+  # InfluxDB usa dos directorios separados: datos y configuración.
+  # Se crean dos PVCs independientes para poder gestionarlos por separado
+  # y dimensionarlos de forma diferente (los datos crecen, la config no).
+  volumeClaimTemplates:
+    - metadata:
+        name: influxdb-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+    - metadata:
+        name: influxdb-config
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Mi
+{{- end }}

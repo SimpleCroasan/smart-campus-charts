@@ -1,0 +1,96 @@
+---
+# ─── Service Headless ────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-monitoring
+  namespace: monitoring
+  labels:
+    app: minio-monitoring
+spec:
+  clusterIP: None
+  selector:
+    app: minio-monitoring
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+
+---
+# ─── StatefulSet ─────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio-monitoring
+  namespace: monitoring
+  labels:
+    app: minio-monitoring
+spec:
+  serviceName: minio-monitoring
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-monitoring
+  template:
+    metadata:
+      labels:
+        app: minio-monitoring
+    spec:
+      priorityClassName: observability-low-priority
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: role
+                    operator: In
+                    values:
+                      - observability
+      containers:
+        - name: minio-monitoring
+          image: quay.io/minio/minio:latest
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          ports:
+            - name: api
+              containerPort: 9000
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: monitoring-credentials
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: monitoring-credentials
+                  key: MINIO_ROOT_PASSWORD
+          volumeMounts:
+            - name: minio-monitoring-data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: minio-monitoring-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.minio.storage }}

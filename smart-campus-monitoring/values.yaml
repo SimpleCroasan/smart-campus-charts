@@ -1,0 +1,167 @@
+# ── MinIO dedicado para logs ──────────────────────────────────────
+minio:
+  enabled: true
+  rootUser: admin
+  rootPassword: password
+  storage: 10Gi
+
+# ── Observabilidad ────────────────────────────────────────────────
+observability:
+  lowPriority: true
+
+# ── Loki (modo monolítico) ────────────────────────────────────────
+loki:
+  namespaceOverride: monitoring
+  deploymentMode: SingleBinary
+  loki:
+    auth_enabled: false
+    storage:
+      bucketNames:
+        chunks: loki
+        ruler: loki
+        admin: loki
+      type: s3
+      s3:
+        endpoint: http://minio-monitoring.monitoring.svc.cluster.local:9000
+        accessKeyId: admin
+        secretAccessKey: password
+        s3ForcePathStyle: true
+        insecure: true
+        region: us-east-1
+    commonConfig:
+      replication_factor: 1
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: s3
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      retention_period: 168h
+    compactor:
+      working_directory: /var/loki/compactor
+      compaction_interval: 10m
+      retention_enabled: true
+      delete_request_store: s3
+  singleBinary:
+    replicas: 1
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                    - observability
+    priorityClassName: observability-low-priority
+  gateway:
+    affinity: {}
+  backend:
+    replicas: 0
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  chunksCache:
+    enabled: false
+  resultsCache:
+    enabled: false
+  minio:
+    enabled: false
+
+# ── Alloy (recolector de logs) ────────────────────────────────────
+alloy:
+  namespaceOverride: monitoring
+  crds:
+    create: false
+  alloy:
+    configMap:
+      content: |-
+        discovery.kubernetes "pods" {
+          role = "pod"
+        }
+
+        discovery.relabel "pod_logs" {
+          targets = discovery.kubernetes.pods.targets
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            target_label  = "namespace"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_name"]
+            target_label  = "pod"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_container_name"]
+            target_label  = "container"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app"]
+            target_label  = "app"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            regex         = "smart-campus|monitoring"
+            action        = "keep"
+          }
+        }
+
+        loki.source.kubernetes "pods" {
+          targets    = discovery.relabel.pod_logs.output
+          forward_to = [loki.write.default.receiver]
+        }
+
+        loki.write "default" {
+          endpoint {
+            url = "http://monitoring-loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+          }
+        }
+    mounts:
+      varlog: false
+  controller:
+    type: daemonset
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: role
+                operator: In
+                values:
+                  - observability
+  priorityClassName: observability-low-priority
+
+# ── Grafana ───────────────────────────────────────────────────────
+grafana:
+  namespaceOverride: monitoring
+  adminPassword: admin
+  grafana.ini:
+    server:
+      root_url: "http://%(domain)s/grafana"
+      serve_from_sub_path: true
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Loki
+          type: loki
+          url: http://monitoring-loki.monitoring.svc.cluster.local:3100
+          access: proxy
+          isDefault: true
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: role
+                operator: In
+                values:
+                  - observability
+  priorityClassName: observability-low-priority

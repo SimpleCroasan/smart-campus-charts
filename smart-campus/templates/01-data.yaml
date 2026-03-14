@@ -1,0 +1,168 @@
+---
+# ─── Service ─────────────────────────────────────────────────────────────────
+# Los microservicios usan Deployment (no StatefulSet) porque son stateless —
+# no tienen datos propios, toda la persistencia vive en las bases de datos.
+# Un Deployment permite escalar horizontalmente sin restricciones.
+{{- if .Values.dataService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: data
+  namespace: smart-campus
+  labels:
+    app: data
+spec:
+  selector:
+    app: data
+  ports:
+    - port: 8082
+      targetPort: 8082
+  type: ClusterIP
+
+---
+# ─── Deployment ──────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data
+  namespace: smart-campus
+  labels:
+    app: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data
+  template:
+    metadata:
+      labels:
+        app: data
+    spec:
+      # Los microservicios deben esperar a que las bases de datos y brokers
+      # estén listos antes de arrancar. initContainers verifica la disponibilidad
+      # de cada dependencia antes de iniciar el contenedor principal.
+      initContainers:
+        - name: wait-for-rabbitmq
+          image: busybox
+          command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done']
+        - name: wait-for-emqx
+          image: busybox
+          command: ['sh', '-c', 'until nc -z emqx 1883; do echo waiting for emqx; sleep 2; done']
+        - name: wait-for-mongodb
+          image: busybox
+          command: ['sh', '-c', 'until nc -z mongodb 27017; do echo waiting for mongodb; sleep 2; done']
+        - name: wait-for-influxdb
+          image: busybox
+          command: ['sh', '-c', 'until nc -z influxdb 8086; do echo waiting for influxdb; sleep 2; done']
+        - name: wait-for-minio
+          image: busybox
+          command: ['sh', '-c', 'until nc -z minio 9000; do echo waiting for minio; sleep 2; done']
+      containers:
+        - name: data
+          # Imagen construida localmente con nerdctl.
+          # imagePullPolicy: Never indica a k3s que no busque la imagen
+          # en ningún registry — debe existir en el containerd local.
+          image: {{ .Values.dataService.image }}:{{ .Values.dataService.tag }}
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8082
+          env:
+            - name: DATA_SERVICE_PORT
+              value: "8082"
+            # RabbitMQ
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: RABBITMQ_USERNAME
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: RABBITMQ_PASSWORD
+            # EMQX
+            - name: MQTT_BROKER_URL
+              value: tcp://emqx:1883
+            - name: MQTT_BROKER_CLIENT_ID
+              value: admin
+            - name: TOPIC_LISTENER
+              value: device/messages
+            # InfluxDB
+            - name: INFLUXDB_URL
+              value: http://influxdb:8086
+            - name: INFLUXDB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_TOKEN
+            - name: INFLUXDB_ORG
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_ORG
+            - name: INFLUXDB_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: INFLUXDB_BUCKET
+            # MongoDB
+            - name: MONGO_HOST
+              value: mongodb
+            - name: MONGO_PORT
+              value: "27017"
+            - name: MONGO_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: MONGO_DATABASE
+            - name: MONGO_AUTH_DB
+              value: admin
+            - name: MONGO_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: MONGO_USERNAME
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: MONGO_PASSWORD
+            # MinIO
+            - name: MINIO_URL
+              value: http://minio:9000
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: MINIO_ROOT_USER
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: MINIO_ROOT_PASSWORD
+            - name: MINIO_BUCKET
+              value: iot
+            # Video
+            - name: VIDEO_DURATION_MINUTES
+              value: "1"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+{{- end }}
