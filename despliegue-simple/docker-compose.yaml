@@ -1,4 +1,4 @@
-services:
+Xservices:
   postgres:
     image: postgres
     restart: always
@@ -14,7 +14,7 @@ services:
     - ./data/postgres-data:/var/lib/postgresql/data
     networks:
       - iot_campus_uis
-  
+
   influxdb:
     image: influxdb:2.7.11
     restart: always
@@ -34,7 +34,7 @@ services:
       - ./data/influxdb/config:/etc/influxdb2
     networks:
       - iot_campus_uis
-  
+
   mongodb:
     image: mongo
     restart: always
@@ -50,7 +50,7 @@ services:
       - ./data/mongodb/data:/data/db
     networks:
       - iot_campus_uis
-  
+
   minio:
     image: quay.io/minio/minio
     restart: always
@@ -84,7 +84,7 @@ services:
       - ./data/emqx/log:/opt/emqx/log
     networks:
       - iot_campus_uis
-  
+
   rabbitmq:
     image: rabbitmq:4.0-management
     restart: always
@@ -98,7 +98,7 @@ services:
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     networks:
       - iot_campus_uis
-    
+
   admin:
     image: semillerocage/admin-service:latest
     restart: always
@@ -113,7 +113,7 @@ services:
       - ADMIN_SERVICE_PORT=${ADMIN_SERVICE_PORT}
     networks:
       - iot_campus_uis
-  
+
   data:
     image: semillerocage/data-service:1.0
     restart: always
@@ -153,7 +153,7 @@ services:
       - iot_campus_uis
     extra_hosts:
       - "host.docker.internal:host-gateway"
-  
+
   gateway:
     restart: always
     build: go_gateway
@@ -179,7 +179,7 @@ services:
       - 4000:80
     networks:
       - iot_campus_uis
-  
+
   grafana:
     image: "grafana/grafana:11.5.0"
     container_name: grafana
@@ -193,6 +193,6 @@ services:
     depends_on:
       - influxdb
 
-networks: 
+networks:
   iot_campus_uis:
     driver: bridge
