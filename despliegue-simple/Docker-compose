@@ -1,0 +1,198 @@
+services:
+  postgres:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    env_file: .env
+    ports:
+     - 5432:5432
+    environment:
+      - POSTGRES_USER=${POSTGRESQL_USER}
+      - POSTGRES_DB=${POSTGRESQL_DB}
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD}
+    volumes:
+    - ./data/postgres-data:/var/lib/postgresql/data
+    networks:
+      - iot_campus_uis
+  
+  influxdb:
+    image: influxdb:2.7.11
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 8086:8086
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+    volumes:
+      - ./data/influxdb/data:/var/lib/influxdb2
+      - ./data/influxdb/config:/etc/influxdb2
+    networks:
+      - iot_campus_uis
+  
+  mongodb:
+    image: mongo
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGO_DATABASE}
+    volumes:
+      - ./data/mongodb/data:/data/db
+    networks:
+      - iot_campus_uis
+  
+  minio:
+    image: quay.io/minio/minio
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ./data/minio/data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - iot_campus_uis
+
+  emqx:
+    user: root
+    image: "emqx/emqx:5.8"
+    restart: always
+    container_name: emqx
+    ports:
+      - 1883:1883
+      - 8083:8083
+      - 8084:8084
+      - 8883:8883
+      - 18083:18083
+    volumes:
+      - ./data/emqx/data:/opt/emqx/data
+      - ./data/emqx/log:/opt/emqx/log
+    networks:
+      - iot_campus_uis
+  
+  rabbitmq:
+    image: rabbitmq:4.0-management
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    networks:
+      - iot_campus_uis
+    
+  admin:
+    image: semillerocage/admin-service:latest
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRESQL_HOST=postgres
+      - POSTGRESQL_PORT=${POSTGRESQL_PORT}
+      - POSTGRESQL_DB=${POSTGRESQL_DB}
+      - POSTGRESQL_USER=${POSTGRESQL_USER}
+      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
+      - ADMIN_SERVICE_PORT=${ADMIN_SERVICE_PORT}
+    networks:
+      - iot_campus_uis
+  
+  data:
+    image: semillerocage/data-service:1.0
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 8082:8082
+    environment:
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - MQTT_BROKER_URL=${MQTT_BROKER_URL}
+      - MQTT_BROKER_CLIENT_ID=${MQTT_BROKER_CLIENT_ID}
+      - TOPIC_LISTENER=${TOPIC_LISTENER}
+      - INFLUXDB_URL=${INFLUXDB_URL}
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_DATABASE=${MONGO_DATABASE}
+      - MONGO_AUTH_DB=${MONGO_AUTH_DB}
+      - MONGO_USERNAME=${MONGO_USERNAME}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - MINIO_URL=${MINIO_URL}
+      - MINIO_ACCES_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - VIDEO_DURATION_MINUTES=${VIDEO_DURATION_MINUTES}
+    depends_on:
+      - influxdb
+      - mongodb
+      - minio
+      - rabbitmq
+      - emqx
+    networks:
+      - iot_campus_uis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  
+  gateway:
+    restart: always
+    build: go_gateway
+    depends_on:
+      - admin
+    ports:
+      - 8080:8080
+    environment:
+      - ADMIN_HOST=http://admin:${ADMIN_SERVICE_PORT}
+      - DATA_HOST=http://data:${DATA_SERVICE_PORT}
+      - GATEWAY_PORT=${GATEWAY_PORT}
+    networks:
+      - iot_campus_uis
+
+  frontend:
+    restart: always
+    build: frontend_admin
+    depends_on:
+      - admin
+      - gateway
+      - data
+    ports:
+      - 4000:80
+    networks:
+      - iot_campus_uis
+  
+  grafana:
+    image: "grafana/grafana:11.5.0"
+    container_name: grafana
+    user: "$UID:$GID"
+    ports:
+      - "3000:3000"
+    volumes:
+      - '$PWD/data/grafana:/var/lib/grafana'
+    networks:
+      - iot_campus_uis
+    depends_on:
+      - influxdb
+
+networks: 
+  iot_campus_uis:
+    driver: bridge
