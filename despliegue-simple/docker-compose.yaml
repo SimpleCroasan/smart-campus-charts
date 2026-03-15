@@ -1,4 +1,4 @@
-Xservices:
+services:
   postgres:
     image: postgres
     restart: always
@@ -100,7 +100,7 @@ Xservices:
       - iot_campus_uis
 
   admin:
-    image: semillerocage/admin-service:latest
+    image: semillerocage/admin-service:1.0
     restart: always
     depends_on:
       - postgres
@@ -156,7 +156,7 @@ Xservices:
 
   gateway:
     restart: always
-    build: go_gateway
+    image: semillerocage/go-gateway:1.0
     depends_on:
       - admin
     ports:
@@ -170,7 +170,7 @@ Xservices:
 
   frontend:
     restart: always
-    build: frontend_admin
+    image: semillerocage/front-end-admin:1.0
     depends_on:
       - admin
       - gateway
