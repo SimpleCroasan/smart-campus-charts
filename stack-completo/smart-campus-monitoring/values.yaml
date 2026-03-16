@@ -59,6 +59,22 @@ loki:
                   values:
                     - observability
     priorityClassName: observability-low-priority
+    initContainers:
+      - name: create-loki-bucket
+        image: minio/mc:latest
+        env:
+          - name: MC_CONFIG_DIR
+            value: /tmp/.mc
+        command:
+          - sh
+          - -c
+          - |
+            until mc alias set local http://minio-monitoring.monitoring.svc.cluster.local:9000 admin password; do
+              echo "waiting for minio...";
+              sleep 3;
+            done;
+            mc mb --ignore-existing local/loki;
+            echo "bucket loki ready"
   gateway:
     affinity: {}
   backend:
