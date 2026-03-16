@@ -24,3 +24,15 @@ dataService:
 
 adminService:
   enabled: true
+# ── Imágenes ──────────────────────────────────────────────────────
+# imageSource: local  — usa la imagen del containerd del nodo (imagePullPolicy: Never)
+# imageSource: remote — descarga desde DockerHub              (imagePullPolicy: IfNotPresent)
+dataService:
+  imageSource: local
+  image: data-service
+  tag: latest
+
+adminService:
+  imageSource: local
+  image: admin-service
+  tag: latest

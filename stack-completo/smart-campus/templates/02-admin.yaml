@@ -42,7 +42,8 @@ spec:
       containers:
         - name: admin
           image: {{ .Values.adminService.image }}:{{ .Values.adminService.tag }}
-          imagePullPolicy: Never
+          {{- $source := .Values.adminService.imageSource | default .Values.imageSource }}
+          imagePullPolicy: {{ if eq $source "remote" }}IfNotPresent{{ else }}Never{{ end }}
           ports:
             - containerPort: 8081
           env:

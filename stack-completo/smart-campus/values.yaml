@@ -42,3 +42,22 @@ adminService:
   enabled: true
   image: admin-service
   tag: latest
+
+# ── Origen de imágenes ────────────────────────────────────────────
+# Fallback global — aplica si un servicio no define su propio imageSource.
+# local  — imagen en el containerd del nodo  (imagePullPolicy: Never)
+# remote — imagen desde DockerHub            (imagePullPolicy: IfNotPresent)
+imageSource: remote
+
+# ── Imágenes ──────────────────────────────────────────────────────
+dataService:
+  enabled: true
+  image: semillerocage/data-service
+  tag: "1.0"
+  imageSource: remote
+
+adminService:
+  enabled: true
+  image: semillerocage/admin-service
+  tag: "1.0"
+  imageSource: remote

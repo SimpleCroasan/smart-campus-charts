@@ -63,7 +63,8 @@ spec:
           # imagePullPolicy: Never indica a k3s que no busque la imagen
           # en ningún registry — debe existir en el containerd local.
           image: {{ .Values.dataService.image }}:{{ .Values.dataService.tag }}
-          imagePullPolicy: Never
+          {{- $source := .Values.dataService.imageSource | default .Values.imageSource }}
+          imagePullPolicy: {{ if eq $source "remote" }}IfNotPresent{{ else }}Never{{ end }}
           ports:
             - containerPort: 8082
           env:
