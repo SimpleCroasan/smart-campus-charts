@@ -37,6 +37,10 @@ spec:
     metadata:
       labels:
         app: data
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/actuator/prometheus"
     spec:
       # Los microservicios deben esperar a que las bases de datos y brokers
       # estén listos antes de arrancar. initContainers verifica la disponibilidad

@@ -137,6 +137,51 @@ alloy:
             url = "http://monitoring-loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
           }
         }
+
+        // ── Métricas Spring ───────────────────────────────────────
+        discovery.relabel "spring_metrics" {
+          targets = discovery.kubernetes.pods.targets
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            regex         = "smart-campus"
+            action        = "keep"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
+            regex         = "true"
+            action        = "keep"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_ip", "__meta_kubernetes_pod_annotation_prometheus_io_port"]
+            separator     = ":"
+            target_label  = "__address__"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_path"]
+            regex         = "(.+)"
+            target_label  = "__metrics_path__"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app"]
+            target_label  = "app"
+          }
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            target_label  = "namespace"
+          }
+        }
+
+        prometheus.scrape "spring" {
+          targets         = discovery.relabel.spring_metrics.output
+          forward_to      = [prometheus.remote_write.local.receiver]
+          scrape_interval = "10s"
+        }
+
+        prometheus.remote_write "local" {
+          endpoint {
+            url = "http://monitoring-prometheus-server.monitoring.svc.cluster.local/api/v1/write"
+          }
+        }
     mounts:
       varlog: false
   controller:
@@ -170,6 +215,10 @@ grafana:
           url: http://monitoring-loki.monitoring.svc.cluster.local:3100
           access: proxy
           isDefault: true
+        - name: Prometheus
+          type: prometheus
+          url: http://monitoring-prometheus-server.monitoring.svc.cluster.local
+          access: proxy
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -181,3 +230,33 @@ grafana:
                 values:
                   - observability
   priorityClassName: observability-low-priority
+
+# ── Prometheus ────────────────────────────────────────────────────
+prometheus:
+  namespaceOverride: monitoring
+  server:
+    extraArgs:
+      web.enable-remote-write-receiver: null
+    retention: "15d"
+    persistentVolume:
+      enabled: true
+      size: 8Gi
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                    - observability
+    priorityClassName: observability-low-priority
+  alertmanager:
+    enabled: false
+  prometheus-pushgateway:
+    enabled: false
+  kube-state-metrics:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false

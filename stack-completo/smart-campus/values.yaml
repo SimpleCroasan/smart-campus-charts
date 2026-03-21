@@ -53,11 +53,11 @@ imageSource: remote
 dataService:
   enabled: true
   image: semillerocage/data-service
-  tag: "1.0"
+  tag: "1.1"
   imageSource: remote
 
 adminService:
   enabled: true
   image: semillerocage/admin-service
-  tag: "1.0"
+  tag: "1.1"
   imageSource: remote
