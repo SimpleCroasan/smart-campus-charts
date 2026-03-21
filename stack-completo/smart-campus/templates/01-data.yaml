@@ -42,21 +42,31 @@ spec:
       # estén listos antes de arrancar. initContainers verifica la disponibilidad
       # de cada dependencia antes de iniciar el contenedor principal.
       initContainers:
+        {{- if .Values.rabbitmq.enabled }}
         - name: wait-for-rabbitmq
           image: busybox
           command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done']
+        {{- end }}
+        {{- if .Values.emqx.enabled }}
         - name: wait-for-emqx
           image: busybox
           command: ['sh', '-c', 'until nc -z emqx 1883; do echo waiting for emqx; sleep 2; done']
+        {{- end }}
+        {{- if .Values.mongo.enabled }}
         - name: wait-for-mongodb
           image: busybox
           command: ['sh', '-c', 'until nc -z mongodb 27017; do echo waiting for mongodb; sleep 2; done']
+        {{- end }}
+        {{- if .Values.influxdb.enabled }}
         - name: wait-for-influxdb
           image: busybox
           command: ['sh', '-c', 'until nc -z influxdb 8086; do echo waiting for influxdb; sleep 2; done']
+        {{- end }}
+        {{- if .Values.minio.enabled }}
         - name: wait-for-minio
           image: busybox
           command: ['sh', '-c', 'until nc -z minio 9000; do echo waiting for minio; sleep 2; done']
+        {{- end }}
       containers:
         - name: data
           # Imagen construida localmente con nerdctl.
