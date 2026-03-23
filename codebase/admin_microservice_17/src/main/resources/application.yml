@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRESQL_HOST:localhost}:${POSTGRESQL_PORT:5432}/${POSTGRESQL_DB:iot}
+    driverClassName: org.postgresql.Driver
+    username:  ${POSTGRESQL_USER:postgres}
+    password: ${POSTGRESQL_PASSWORD:IoTPass1234}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+server:
+  port: ${ADMIN_SERVICE_PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  metrics:
+    tags:
+      application: admin
