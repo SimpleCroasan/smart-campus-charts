@@ -3,6 +3,8 @@ package com.smartuis.module.application.controller;
 import com.smartuis.module.domain.entity.Message;
 import com.smartuis.module.persistence.repository.MongoRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,84 +15,63 @@ import java.util.List;
 @RequestMapping("/mongo")
 public class MongoController {
 
-    private MongoRepository messageRepository;
+    private static final Logger log = LoggerFactory.getLogger(MongoController.class);
+
+    private final MongoRepository messageRepository;
 
     public MongoController(MongoRepository messageRepository) {
         this.messageRepository = messageRepository;
     }
 
-    @Operation(
-            summary = "Buscar mensajes por ID de dispositivo",
-            description = "Recupera una lista de mensajes asociados a un ID de dispositivo específico.\n  " +
-                    "- El ID del dispositivo debe proporcionarse como un parámetro en la ruta."
-    )
+    @Operation(summary = "Buscar mensajes por ID de dispositivo")
     @GetMapping("/deviceId/{deviceId}")
-    public ResponseEntity<List<Message>> findMessagesByDeviceId(@PathVariable String deviceId){
-        System.out.println(deviceId);
-        List<Message> messages = messageRepository.findMessagesByDeviceId(deviceId);
-        return ResponseEntity.ok(messages);
+    public ResponseEntity<List<Message>> findMessagesByDeviceId(@PathVariable String deviceId) {
+        log.info("GET /mongo/deviceId/{}", deviceId);
+        return ResponseEntity.ok(messageRepository.findMessagesByDeviceId(deviceId));
     }
 
-    @Operation(
-            summary = "Buscar mensajes por ubicación",
-            description = "Recupera una lista de mensajes asociados a una ubicación específica. \n" +
-                    "- La ubicación debe proporcionarse como un parámetro en la ruta."
-    )
+    @Operation(summary = "Buscar mensajes por ubicación")
     @GetMapping("/location/{location}")
-    public ResponseEntity<List<Message>> findMessagesByLocation(@PathVariable String location){
-        System.out.println(location);
-        List<Message> messages = messageRepository.findMessagesByLocation(location);
-        return ResponseEntity.ok(messages);
+    public ResponseEntity<List<Message>> findMessagesByLocation(@PathVariable String location) {
+        log.info("GET /mongo/location/{}", location);
+        return ResponseEntity.ok(messageRepository.findMessagesByLocation(location));
     }
 
-    @Operation(
-            summary = "Buscar mensajes por rango de fechas",
-            description = "Recupera una lista de mensajes entre dos fechas especificadas. \n" +
-                    " - Las fechas de inicio y fin deben proporcionarse como parámetros de consulta en formato 'YYYY-MM-DD'."
-    )
+    @Operation(summary = "Buscar mensajes por rango de fechas")
     @GetMapping("/by-time-range")
-    public ResponseEntity<List<Message>> findMessagesByDateRange(@RequestParam String start, @RequestParam String end){
+    public ResponseEntity<List<Message>> findMessagesByDateRange(
+            @RequestParam String start, @RequestParam String end) {
+        log.info("GET /mongo/by-time-range - start: {}, end: {}", start, end);
         Instant startDate = Instant.parse(start + "T00:00:00Z");
-        Instant endDate = Instant.parse(end + "T23:59:59Z");
-        List<Message> messages = messageRepository.findMessagesBetweenTwoDate(startDate, endDate);
-        return ResponseEntity.ok(messages);
+        Instant endDate   = Instant.parse(end   + "T23:59:59Z");
+        return ResponseEntity.ok(messageRepository.findMessagesBetweenTwoDate(startDate, endDate));
     }
 
-    @Operation(
-            summary = "Buscar mensajes en unidades de tiempo específicas",
-            description = "Recupera una lista de mensajes dentro de un período de tiempo específico.\n " +
-                    "- El período de tiempo debe proporcionarse como un parámetro en la ruta, por ejemplo, '1h' para una hora o '30m' para treinta minutos." +
-                    "- Acepta valores en hora (h), minutos (m) y segundos (s)"
-    )
+    @Operation(summary = "Buscar mensajes en unidades de tiempo")
     @GetMapping("/date/units/{time}")
     public ResponseEntity<List<Message>> findMessageInUnitsTime(@PathVariable String time) {
+        log.info("GET /mongo/date/units/{}", time);
         return ResponseEntity.ok(messageRepository.findMessagesInUnitsTime(time));
     }
 
-    @Operation(
-            summary = "Obtener las últimas mediciones",
-            description = "Recupera una lista de las últimas mediciones de un tipo específico.\n" +
-                    "- El tipo de medición se proporciona como un parámetro de consulta llamado 'measurement'. " +
-                    "- Opcionalmente, se puede especificar el número máximo de resultados a devolver mediante el parámetro 'limit', que por defecto es 20."
-    )
+    @Operation(summary = "Obtener las últimas mediciones")
     @GetMapping("/measurement/last")
-    public ResponseEntity<List<Message>> findLastMeasurements(@RequestParam String measurement, @RequestParam(required = false, defaultValue = "20") Integer limit){
-        List<Message> messages = messageRepository.findLastMeasurements(measurement, limit);
-        return ResponseEntity.ok(messages);
+    public ResponseEntity<List<Message>> findLastMeasurements(
+            @RequestParam String measurement,
+            @RequestParam(required = false, defaultValue = "20") Integer limit) {
+        log.info("GET /mongo/measurement/last - measurement: {}, limit: {}", measurement, limit);
+        return ResponseEntity.ok(messageRepository.findLastMeasurements(measurement, limit));
     }
 
-    @Operation(
-            summary = "Buscar mediciones por rango de tiempo",
-            description = "Recupera una lista de mediciones de un tipo específico dentro de un rango de fechas. \n" +
-                    "- El tipo de medición se proporciona como un parámetro de consulta llamado 'measurement'. " +
-                    "- Las fechas de inicio y fin deben proporcionarse como parámetros de consulta llamados 'start' y 'end', respectivamente, en formato 'YYYY-MM-DD'."
-    )
+    @Operation(summary = "Buscar mediciones por rango de tiempo")
     @GetMapping("/measurement/by-time-range")
-    public ResponseEntity<List<Message>> findMeasurementsByTimeRange(@RequestParam String measurement, @RequestParam String start, @RequestParam String end){
+    public ResponseEntity<List<Message>> findMeasurementsByTimeRange(
+            @RequestParam String measurement,
+            @RequestParam String start,
+            @RequestParam String end) {
+        log.info("GET /mongo/measurement/by-time-range - measurement: {}, start: {}, end: {}", measurement, start, end);
         Instant fromDate = Instant.parse(start + "T00:00:00Z");
-        Instant toDate = Instant.parse(end + "T23:59:59Z");
-        List<Message> messages = messageRepository.findMeasurementsByTimeRange(measurement, fromDate, toDate);
-        return ResponseEntity.ok(messages);
+        Instant toDate   = Instant.parse(end   + "T23:59:59Z");
+        return ResponseEntity.ok(messageRepository.findMeasurementsByTimeRange(measurement, fromDate, toDate));
     }
-
 }
