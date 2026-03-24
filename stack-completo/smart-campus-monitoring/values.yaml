@@ -129,9 +129,7 @@ tempo:
       enabled: true
 
     global_overrides:
-      defaults:
-        ingestion:
-          max_bytes_per_trace: 10000000  # 10 MB por traza
+      max_bytes_per_trace: 10000000  # 10 MB por traza
 
   service:
     type: ClusterIP
