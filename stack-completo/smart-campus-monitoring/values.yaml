@@ -100,7 +100,10 @@ tempo:
 
   tempo:
     multitenancy_enabled: false
-
+    ingester:
+      trace_idle_period: 20s
+      max_block_bytes: 52428800
+      complete_block_timeout: 45s
     # Receptores habilitados: solo OTLP (gRPC y HTTP).
     # Los microservicios Spring Boot envían spans vía Alloy → Tempo.
     receivers:
@@ -264,7 +267,7 @@ alloy:
         prometheus.scrape "spring" {
           targets         = discovery.relabel.spring_metrics.output
           forward_to      = [prometheus.remote_write.local.receiver]
-          scrape_interval = "10s"
+          scrape_interval = "30s"
         }
 
         prometheus.remote_write "local" {
@@ -290,6 +293,24 @@ alloy:
           }
           http {
             endpoint = "0.0.0.0:4318"
+          }
+          output {
+            traces = [otelcol.processor.tail_sampling.drop_actuator.input]
+          }
+        }
+        otelcol.processor.tail_sampling "drop_actuator" {
+          decision_wait               = "5s"
+          num_traces                  = 1000
+          expected_new_traces_per_sec = 10
+
+          policy {
+            name = "drop-actuator"
+            type = "string_attribute"
+            string_attribute {
+              key          = "http.route"
+              values       = ["/actuator/health", "/actuator/prometheus", "/actuator/health/liveness", "/actuator/health/readiness"]
+              invert_match = true
+            }
           }
           output {
             traces = [otelcol.processor.batch.default.input]
