@@ -13,6 +13,7 @@ import com.smartuis.module.persistence.config.InfluxDBConfig;
 import com.smartuis.module.persistence.mapper.FluxRecordMapper;
 import com.smartuis.module.persistence.service.MessageRequeueService;
 import org.springframework.stereotype.Repository;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -20,13 +21,14 @@ import java.util.Optional;
 @Repository
 public class InfluxRepository implements MessageRepository, TemporaryQuery, StatisticsQuery {
 
-    private InfluxDBClient influxDBClient;
-    private String bucket;
-    private FluxRecordMapper fluxRecordMapper;
-    private InfluxService influxService;
-    private MessageRequeueService messageRequeueService;
+    private final InfluxDBClient influxDBClient;
+    private final String bucket;
+    private final FluxRecordMapper fluxRecordMapper;
+    private final InfluxService influxService;
+    private final MessageRequeueService messageRequeueService;
 
-    public InfluxRepository(InfluxDBClient influxDBClient, InfluxDBConfig influxDBConfig, InfluxService influxService, MessageRequeueService  messageRequeueService) {
+    public InfluxRepository(InfluxDBClient influxDBClient, InfluxDBConfig influxDBConfig,
+                            InfluxService influxService, MessageRequeueService messageRequeueService) {
         this.influxDBClient = influxDBClient;
         this.bucket = influxDBConfig.getBucket();
         this.fluxRecordMapper = new FluxRecordMapper();
@@ -38,20 +40,18 @@ public class InfluxRepository implements MessageRepository, TemporaryQuery, Stat
     public Message write(Message message) {
         List<Metric> metrics = message.getMetrics();
         List<Data> data = metrics.stream().map(metric ->
-                        new  Data(message.getHeader().getLocation(),
+                new Data(message.getHeader().getLocation(),
                         metric.getMeasurement(),
                         metric.getValue())).toList();
 
         WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
-
-        data.forEach(point->writeApi.writeMeasurement(WritePrecision.NS, point));
+        data.forEach(point -> writeApi.writeMeasurement(WritePrecision.NS, point));
 
         if (message.getHeader().getShouldRequeue()) {
             messageRequeueService.requeueMessage(message);
         }
         return message;
     }
-
 
     @Override
     public List<Message> findLastMeasurements(String measurement, int limit) {
@@ -60,11 +60,8 @@ public class InfluxRepository implements MessageRepository, TemporaryQuery, Stat
                         "|> filter(fn: (r) => r._measurement == \"%s\") " +
                         "|> sort(columns:[\"_time\"], desc: true) " +
                         "|> limit(n: %d)",
-                bucket , measurement, limit);
-
-        List<FluxTable> tables = influxService.queryData(flux);
-
-        return fluxRecordMapper.mapFluxTablesToMessages(tables);
+                bucket, measurement, limit);
+        return fluxRecordMapper.mapFluxTablesToMessages(influxService.queryData(flux));
     }
 
     @Override
@@ -73,31 +70,24 @@ public class InfluxRepository implements MessageRepository, TemporaryQuery, Stat
                 "from(bucket: \"%s\") |> range(start: %s, stop: %s) " +
                         "|> filter(fn: (r) => r._measurement == \"%s\")",
                 bucket, start.toString(), end.toString(), measurement);
-
-        List<FluxTable> tables = influxService.queryData(flux);
-        return fluxRecordMapper.mapFluxTablesToMessages(tables);
+        return fluxRecordMapper.mapFluxTablesToMessages(influxService.queryData(flux));
     }
 
     @Override
     public List<Message> findMessagesBetweenTwoDate(Instant from, Instant to) {
         String flux = String.format(
                 "from(bucket: \"%s\") |> range(start: %s, stop: %s) |> sort(columns:[\"_time\"])",
-                bucket, from.toString(), to.toString()
-        );
-        List<FluxTable> tables = influxService.queryData(flux);
-        return fluxRecordMapper.mapFluxTablesToMessages(tables);
+                bucket, from.toString(), to.toString());
+        return fluxRecordMapper.mapFluxTablesToMessages(influxService.queryData(flux));
     }
 
     @Override
     public List<Message> findMessagesInUnitsTime(String time) {
         String flux = String.format(
                 "from(bucket: \"%s\") |> range(start: -%s) |> sort(columns:[\"_time\"])",
-                bucket, time
-        );
-        List<FluxTable> tables = influxService.queryData(flux);
-        return fluxRecordMapper.mapFluxTablesToMessages(tables);
+                bucket, time);
+        return fluxRecordMapper.mapFluxTablesToMessages(influxService.queryData(flux));
     }
-
 
     @Override
     public Optional<Double> findAverageValue(String measurement, Instant start, Instant end) {
@@ -123,19 +113,15 @@ public class InfluxRepository implements MessageRepository, TemporaryQuery, Stat
                         "|> filter(fn: (r) => r._measurement == \"%s\" and r._field == \"value\") " +
                         "|> max()",
                 bucket, start.toString(), end.toString(), measurement);
-
         List<FluxTable> tables = influxService.queryData(flux);
-
         if (!tables.isEmpty() && !tables.get(0).getRecords().isEmpty()) {
             Object value = tables.get(0).getRecords().get(0).getValue();
             if (value instanceof Number) {
                 return Optional.of(((Number) value).doubleValue());
             }
         }
-
         return Optional.empty();
     }
-
 
     @Override
     public Optional<Double> findMinValue(String measurement, Instant start, Instant end) {
@@ -145,7 +131,6 @@ public class InfluxRepository implements MessageRepository, TemporaryQuery, Stat
                         "|> min()",
                 bucket, start.toString(), end.toString(), measurement);
         List<FluxTable> tables = influxService.queryData(flux);
-
         if (!tables.isEmpty() && !tables.get(0).getRecords().isEmpty()) {
             Object value = tables.get(0).getRecords().get(0).getValue();
             if (value instanceof Number) {

@@ -1,11 +1,10 @@
 # ── Prioridad ─────────────────────────────────────────────────────
 # true  — baja prioridad, se apaga primero si faltan recursos
 # false — prioridad normal, útil para pruebas de estrés
-# ── Prioridad ─────────────────────────────────────────────────────
 observability:
   lowPriority: true
 
-# ── Componentes ───────────────────────────────────────────────────
+# ── Componentes opcionales ────────────────────────────────────────
 grafana:
   enabled: true
 
@@ -14,3 +13,8 @@ loki:
     enabled: false
   test:
     enabled: false
+
+# tempo está habilitado por defecto mediante la dependencia.
+# Para deshabilitarlo en un despliegue reducido, descomentar:
+# tempo:
+#   enabled: false

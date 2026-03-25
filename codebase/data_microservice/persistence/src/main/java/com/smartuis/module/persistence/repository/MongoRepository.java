@@ -9,17 +9,20 @@ import org.springframework.stereotype.Repository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Repository
-public class MongoRepository implements com.smartuis.module.domain.repository.MessageRepository, FilterQuery, TemporaryQuery {
+public class MongoRepository implements com.smartuis.module.domain.repository.MessageRepository,
+        FilterQuery, TemporaryQuery {
 
-    private IMessageRepository iMessageRepository;
+    private static final Pattern TIME_UNIT_PATTERN = Pattern.compile("^(\\d+)(m|s|h)$");
+
+    private final IMessageRepository iMessageRepository;
 
     public MongoRepository(IMessageRepository iMessageRepository) {
         this.iMessageRepository = iMessageRepository;
     }
-
 
     @Override
     public Message write(Message message) {
@@ -43,36 +46,29 @@ public class MongoRepository implements com.smartuis.module.domain.repository.Me
 
     @Override
     public List<Message> findMessagesInUnitsTime(String time) {
-        var pattern = Pattern.compile("^(\\d+)(m|s|h)$");
-        var matcher = pattern.matcher(time);
-        System.out.println(time);
-        System.out.println(matcher.matches());
-        if(!matcher.matches()){
+        Matcher matcher = TIME_UNIT_PATTERN.matcher(time);
+        if (!matcher.matches()) {
             throw new UnitsTimeException("El patron de unidad de tiempo de ser ^(\\d+)(m|s|h)$\n");
         }
 
-        var number = Integer.parseInt(matcher.group(1));
-        var unit = matcher.group(2).toLowerCase();
-
-        var nowDate = Instant.now();
+        int number = Integer.parseInt(matcher.group(1));
+        String unit = matcher.group(2).toLowerCase();
+        Instant nowDate = Instant.now();
         Instant fromDate;
-        System.out.println(time);
-        System.out.println(nowDate);
 
-        switch (unit){
+        switch (unit) {
             case "s":
-                fromDate =  nowDate.minus(Duration.ofSeconds(number));
+                fromDate = nowDate.minus(Duration.ofSeconds(number));
                 break;
             case "m":
-                fromDate =  nowDate.minus(Duration.ofMinutes(number));
+                fromDate = nowDate.minus(Duration.ofMinutes(number));
                 break;
             case "h":
-                fromDate =  nowDate.minus(Duration.ofHours(number));
+                fromDate = nowDate.minus(Duration.ofHours(number));
                 break;
             default:
                 throw new UnitsTimeException("No existe esa unidad de tiempo");
-        };
-
+        }
 
         return iMessageRepository.findMessagesBetweenTwoDate(fromDate, nowDate);
     }
@@ -82,13 +78,8 @@ public class MongoRepository implements com.smartuis.module.domain.repository.Me
         return iMessageRepository.findLastMeasurements(measurement, limit);
     }
 
-
     @Override
     public List<Message> findMeasurementsByTimeRange(String measurement, Instant start, Instant end) {
         return iMessageRepository.findMeasurementsByTimeRange(measurement, start, end);
     }
-
-
-
-
 }

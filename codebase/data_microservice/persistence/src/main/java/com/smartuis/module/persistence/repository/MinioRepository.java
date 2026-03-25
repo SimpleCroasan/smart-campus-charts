@@ -19,11 +19,11 @@ import java.security.NoSuchAlgorithmException;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-
 @Repository
 public class MinioRepository implements StorageRepository {
 
-    private MinioClient minioClient;
+    private final MinioClient minioClient;
+
     @Value("${minio.bucket}")
     private String bucketName;
 
@@ -32,45 +32,39 @@ public class MinioRepository implements StorageRepository {
     }
 
     @Override
-    public void saveFile(File file, String pathname){
+    public void saveFile(File file, String pathname) {
         try {
             FileInputStream fileInputStream = new FileInputStream(file);
-            List<SnowballObject> objects = List.of(new SnowballObject(pathname,  fileInputStream, file.length(), ZonedDateTime.now()));
+            List<SnowballObject> objects = List.of(
+                    new SnowballObject(pathname, fileInputStream, file.length(), ZonedDateTime.now()));
 
-            ObjectWriteResponse minioResponse = minioClient.uploadSnowballObjects(
+            minioClient.uploadSnowballObjects(
                     UploadSnowballObjectsArgs.builder()
                             .bucket(bucketName)
                             .objects(objects)
-                            .build()
-            );
-
-            System.out.println("Respuesta Minio: " + minioResponse.toString());
-        } catch (ErrorResponseException | InsufficientDataException | InternalException | InvalidKeyException |
-                 InvalidResponseException | IOException | NoSuchAlgorithmException | ServerException |
-                 XmlParserException e) {
+                            .build());
+        } catch (ErrorResponseException | InsufficientDataException | InternalException
+                 | InvalidKeyException | InvalidResponseException | IOException
+                 | NoSuchAlgorithmException | ServerException | XmlParserException e) {
             throw new UploadFileException("Hubo un error subiendo el archivo");
         }
-
     }
 
     @Override
-    public void saveFile(MultipartFile file, String pathname){
+    public void saveFile(MultipartFile file, String pathname) {
         try {
-            List<SnowballObject> objects = List.of(new SnowballObject(pathname,  file.getInputStream(), file.getSize(), ZonedDateTime.now()));
+            List<SnowballObject> objects = List.of(
+                    new SnowballObject(pathname, file.getInputStream(), file.getSize(), ZonedDateTime.now()));
 
-            ObjectWriteResponse minioResponse = minioClient.uploadSnowballObjects(
+            minioClient.uploadSnowballObjects(
                     UploadSnowballObjectsArgs.builder()
                             .bucket(bucketName)
                             .objects(objects)
-                            .build()
-            );
-
-            System.out.println("Respuesta Minio: " + minioResponse.toString());
-        } catch (ErrorResponseException | InsufficientDataException | InternalException | InvalidKeyException |
-                 InvalidResponseException | IOException | NoSuchAlgorithmException | ServerException |
-                 XmlParserException e) {
+                            .build());
+        } catch (ErrorResponseException | InsufficientDataException | InternalException
+                 | InvalidKeyException | InvalidResponseException | IOException
+                 | NoSuchAlgorithmException | ServerException | XmlParserException e) {
             throw new UploadFileException("Hubo un error subiendo el archivo");
         }
-
     }
 }

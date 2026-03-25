@@ -11,6 +11,8 @@ import org.eclipse.paho.mqttv5.client.MqttDisconnectResponse;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -18,7 +20,9 @@ import java.util.List;
 @Component
 public class EmqxListener implements MqttCallback {
 
-    private final  List<MessageRepository> messageRepository;
+    private static final Logger log = LoggerFactory.getLogger(EmqxListener.class);
+
+    private final List<MessageRepository> messageRepository;
     private final ObjectMapper objectMapper;
     private MqttClient client;
 
@@ -33,33 +37,44 @@ public class EmqxListener implements MqttCallback {
 
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) {
+        log.debug("Mensaje recibido en topic MQTT: {}", topic);
         try {
             String payload = new String(mqttMessage.getPayload());
-
             Message message = objectMapper.readValue(payload, Message.class);
-            messageRepository.forEach(repo->repo.write(message));
+            messageRepository.forEach(repo -> repo.write(message));
+            log.debug("Mensaje procesado y persistido desde topic: {}", topic);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error procesando mensaje MQTT en topic {}: {}", topic, e.getMessage(), e);
         }
     }
 
     @Override
     public void disconnected(MqttDisconnectResponse mqttDisconnectResponse) {
-        System.out.println("Disconnected from MQTT Broker.");
+        log.warn("Desconectado del broker MQTT. Razón: {}",
+                mqttDisconnectResponse.getReasonString() != null
+                        ? mqttDisconnectResponse.getReasonString()
+                        : "desconocida");
     }
 
     @Override
     public void mqttErrorOccurred(MqttException e) {
-        System.err.println("️ MQTT Error: " + e.getMessage());
+        log.error("Error MQTT: {} (código: {})", e.getMessage(), e.getReasonCode(), e);
     }
 
     @Override
-    public void deliveryComplete(IMqttToken token) {}
+    public void deliveryComplete(IMqttToken token) {
+        log.debug("Entrega MQTT completada. Topics: {}",
+                token.getTopics() != null ? String.join(", ", token.getTopics()) : "N/A");
+    }
 
     @Override
     public void connectComplete(boolean reconnect, String serverURI) {
+        if (reconnect) log.info("Reconexión exitosa al broker MQTT: {}", serverURI);
+        else           log.info("Conexión establecida con broker MQTT: {}", serverURI);
     }
 
     @Override
-    public void authPacketArrived(int reasonCode, MqttProperties properties) {}
+    public void authPacketArrived(int reasonCode, MqttProperties properties) {
+        log.debug("Paquete de autenticación MQTT recibido. Código: {}", reasonCode);
+    }
 }

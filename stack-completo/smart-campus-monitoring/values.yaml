@@ -90,7 +90,94 @@ loki:
   minio:
     enabled: false
 
-# ── Alloy (recolector de logs) ────────────────────────────────────
+# ── Tempo (backend de trazas distribuidas) ────────────────────────
+# Modo monolítico: todos los componentes en un solo pod.
+# Almacenamiento local en PVC (local-path de K3s) — sin dependencia
+# de MinIO para trazas, manteniendo la arquitectura simple para tesis.
+tempo:
+  namespaceOverride: monitoring
+  replicas: 1
+
+  tempo:
+    multitenancy_enabled: false
+
+    # Receptores habilitados: solo OTLP (gRPC y HTTP).
+    # Los microservicios Spring Boot envían spans vía Alloy → Tempo.
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
+
+    # Retención de trazas: 72h suficiente para el contexto de tesis.
+    retention: 72h
+
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+        # vParquet4: formato columnar óptimo para consultas TraceQL
+        block:
+          version: vParquet4
+
+    search:
+      enabled: true
+
+    global_overrides:
+      max_bytes_per_trace: 10000000  # 10 MB por traza
+
+  service:
+    type: ClusterIP
+
+  serviceAccount:
+    create: true
+    name: tempo
+
+  persistence:
+    enabled: true
+    storageClassName: "local-path"   # StorageClass por defecto de K3s
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  securityContext:
+    fsGroup: 10001
+    runAsGroup: 10001
+    runAsNonRoot: true
+    runAsUser: 10001
+
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3100"
+    prometheus.io/path: "/metrics"
+
+  priorityClassName: observability-low-priority
+
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: role
+                operator: In
+                values:
+                  - observability
+
+# ── Alloy (recolector de logs + trazas) ──────────────────────────
 alloy:
   namespaceOverride: monitoring
   crds:
@@ -98,6 +185,9 @@ alloy:
   alloy:
     configMap:
       content: |-
+        // ============================================================
+        // Pipeline de LOGS — recolección desde pods de Kubernetes
+        // ============================================================
         discovery.kubernetes "pods" {
           role = "pod"
         }
@@ -182,10 +272,66 @@ alloy:
             url = "http://monitoring-prometheus-server.monitoring.svc.cluster.local/api/v1/write"
           }
         }
+
+        // ============================================================
+        // Pipeline de TRAZAS — recibe OTLP de los microservicios
+        // y reenvía a Tempo.
+        //
+        // Los microservicios Spring Boot envían spans vía el agente
+        // Java de OpenTelemetry a este receptor (puerto 4317 gRPC).
+        // Alloy actúa como intermediario para poder añadir metadatos
+        // de Kubernetes sin modificar los microservicios.
+        // ============================================================
+
+        // Receptor OTLP — escucha spans de los microservicios
+        otelcol.receiver.otlp "default" {
+          grpc {
+            endpoint = "0.0.0.0:4317"
+          }
+          http {
+            endpoint = "0.0.0.0:4318"
+          }
+          output {
+            traces = [otelcol.processor.batch.default.input]
+          }
+        }
+
+        // Procesador de lotes — agrupa spans para reducir overhead de red
+        otelcol.processor.batch "default" {
+          timeout         = "5s"
+          send_batch_size = 1024
+          output {
+            traces = [otelcol.exporter.otlp.tempo.input]
+          }
+        }
+
+        // Exportador hacia Tempo (gRPC interno, sin TLS en la red del clúster)
+        otelcol.exporter.otlp "tempo" {
+          client {
+            endpoint = "monitoring-tempo.monitoring.svc.cluster.local:4317"
+            tls {
+              insecure             = true
+              insecure_skip_verify = true
+            }
+          }
+        }
     mounts:
       varlog: false
   controller:
     type: daemonset
+  service:
+    # Exponer puertos OTLP para que los microservicios en smart-campus
+    # puedan enviar spans a Alloy usando su Service de Kubernetes.
+    enabled: true
+    extraPorts:
+      - name: otlp-grpc
+        port: 4317
+        targetPort: 4317
+        protocol: TCP
+      - name: otlp-http
+        port: 4318
+        targetPort: 4318
+        protocol: TCP
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -210,15 +356,87 @@ grafana:
     datasources.yaml:
       apiVersion: 1
       datasources:
+
+        # ── Prometheus — con exemplars hacia Tempo ────────────────
+        - name: Prometheus
+          type: prometheus
+          uid: prometheus
+          url: http://monitoring-prometheus-server.monitoring.svc.cluster.local
+          access: proxy
+          isDefault: false
+          jsonData:
+            httpMethod: POST
+            # Cuando un punto de métrica tiene un exemplar con TraceID,
+            # Grafana muestra un enlace directo a la traza en Tempo.
+            exemplarTraceIdDestinations:
+              - name: traceID
+                datasourceUid: tempo
+                urlDisplayLabel: "Ver traza en Tempo"
+
+        # ── Loki — con derived fields: TraceID → Tempo ────────────
         - name: Loki
           type: loki
+          uid: loki
           url: http://monitoring-loki.monitoring.svc.cluster.local:3100
           access: proxy
           isDefault: true
-        - name: Prometheus
-          type: prometheus
-          url: http://monitoring-prometheus-server.monitoring.svc.cluster.local
+          jsonData:
+            maxLines: 1000
+            # derivedFields extrae el trace_id del texto del log y
+            # genera un enlace clickeable directo a la traza en Tempo.
+            # El agente OTel inyecta el formato:
+            #   [admin,4bf92f3577b34da6a3ce929d0e0e4736,00f067aa0ba902b7]
+            derivedFields:
+              - name: TraceID
+                matcherRegex: '\[[\w-]+,([a-fA-F0-9]{16,32}),'
+                url: "$${__value.raw}"
+                datasourceUid: tempo
+                urlDisplayLabel: "Ver traza"
+
+        # ── Tempo — con correlación hacia Loki y Prometheus ──────
+        - name: Tempo
+          type: tempo
+          uid: tempo
+          url: http://monitoring-tempo.monitoring.svc.cluster.local:3100
           access: proxy
+          isDefault: false
+          jsonData:
+            httpMethod: GET
+            # Trace → Logs: desde un span abre los logs del servicio
+            # filtrados por TraceID en Loki.
+            tracesToLogsV2:
+              datasourceUid: loki
+              spanStartTimeShift: "-30m"
+              spanEndTimeShift: "30m"
+              filterByTraceID: true
+              filterBySpanID: false
+              # Mapea el atributo OTel "service.name" a la etiqueta
+              # "app" que Loki usa (inyectada por Alloy desde K8s).
+              tags:
+                - key: "service.name"
+                  value: "app"
+            # Trace → Metrics: desde un span abre métricas del servicio
+            tracesToMetrics:
+              datasourceUid: prometheus
+              spanStartTimeShift: "-30m"
+              spanEndTimeShift: "30m"
+              tags:
+                - key: "service.name"
+                  value: "app"
+              queries:
+                - name: "Request Rate"
+                  query: 'sum(rate(http_server_requests_seconds_count{app="${__tags.app}"}[5m]))'
+                - name: "Error Rate"
+                  query: 'sum(rate(http_server_requests_seconds_count{app="${__tags.app}", status=~"5.."}[5m]))'
+                - name: "Latencia P95"
+                  query: 'histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{app="${__tags.app}"}[5m])) by (le))'
+            # Service graph: grafo de dependencias generado desde spans
+            nodeGraph:
+              enabled: true
+            search:
+              hide: false
+            lokiSearch:
+              datasourceUid: loki
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -237,6 +455,15 @@ prometheus:
   server:
     extraArgs:
       web.enable-remote-write-receiver: null
+      # Habilitar almacenamiento de exemplars para correlación
+      # de métricas con trazas (punto en gráfica → traza en Tempo).
+      enable-feature: exemplar-storage
+    extraFlags:
+      - "web.enable-remote-write-receiver"
+    global:
+      # Máximo de exemplars almacenados en memoria
+      external_labels:
+        cluster: smart-campus-k3s
     retention: "15d"
     persistentVolume:
       enabled: true

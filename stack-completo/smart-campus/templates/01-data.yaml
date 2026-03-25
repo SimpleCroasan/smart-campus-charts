@@ -73,9 +73,6 @@ spec:
         {{- end }}
       containers:
         - name: data
-          # Imagen construida localmente con nerdctl.
-          # imagePullPolicy: Never indica a k3s que no busque la imagen
-          # en ningún registry — debe existir en el containerd local.
           image: {{ .Values.dataService.image }}:{{ .Values.dataService.tag }}
           {{- $source := .Values.dataService.imageSource | default .Values.imageSource }}
           imagePullPolicy: {{ if eq $source "remote" }}IfNotPresent{{ else }}Never{{ end }}
@@ -164,6 +161,29 @@ spec:
             # Video
             - name: VIDEO_DURATION_MINUTES
               value: "1"
+            # ── OpenTelemetry — trazas distribuidas ───────────────
+            # El agente Java (incluido en el Dockerfile) usa estas variables
+            # para configurar el exportador OTLP sin modificar el código.
+            # Los spans van a Alloy (namespace monitoring) que los reenvía a Tempo.
+            - name: OTEL_SERVICE_NAME
+              value: "data"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://monitoring-alloy-otlp.monitoring.svc.cluster.local:4317"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_TRACES_SAMPLER
+              value: "always_on"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            # Desactivar exportadores no usados — Prometheus ya recolecta
+            # métricas vía /actuator/prometheus y los logs van a Loki
+            # directamente desde stdout del pod.
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=smart-campus,deployment.environment=thesis"
           livenessProbe:
             httpGet:
               path: /actuator/health
