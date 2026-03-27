@@ -175,6 +175,8 @@ spec:
               value: "always_on"
             - name: OTEL_PROPAGATORS
               value: "tracecontext,baggage"
+            - name: LOGGING_CONFIG
+              value: "classpath:application/logback-spring.xml"
             # Desactivar exportadores no usados — Prometheus ya recolecta
             # métricas vía /actuator/prometheus y los logs van a Loki
             # directamente desde stdout del pod.
