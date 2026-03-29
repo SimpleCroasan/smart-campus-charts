@@ -367,6 +367,7 @@ alloy:
 
 # ── Grafana ───────────────────────────────────────────────────────
 grafana:
+  enabled: true
   namespaceOverride: monitoring
   adminPassword: admin
   sidecar:
