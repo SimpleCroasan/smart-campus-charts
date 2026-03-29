@@ -25,7 +25,7 @@ data:
           "targets": [
             {
               "expr": "sum by (app) (rate({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} [5m]))",
-              "legendFormat": "{{app}}",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
               "refId": "A"
             }
           ],
@@ -53,7 +53,7 @@ data:
           "targets": [
             {
               "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]| ERROR:| PANIC:|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [1h]))",
-              "legendFormat": "{{app}}",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
               "refId": "A",
               "instant": true
             }

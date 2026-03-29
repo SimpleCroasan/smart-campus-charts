@@ -1,279 +1,279 @@
 {{- if .Values.grafana.enabled }}
-apiVersion v1
-kind ConfigMap
-metadata
-  name dashboard-smart-campus-overview
-  namespace {{ .Values.grafana.namespaceOverride  default .Release.Namespace }}
-  labels
-    grafana_dashboard 1
-data
-  smart-campus-overview.json 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-smart-campus-overview
+  namespace: {{ .Values.grafana.namespaceOverride | default .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  smart-campus-overview.json: |
     {
-      annotations {
-        list []
+      "annotations": {
+        "list": []
       },
-      description Vista general del sistema Smart Campus UIS - logs, errores y actividad,
-      editable true,
-      fiscalYearStartMonth 0,
-      graphTooltip 1,
-      links [],
-      panels [
+      "description": "Vista general del sistema Smart Campus UIS - logs, errores y actividad",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
         {
-          id 1,
-          title Volumen de logs por minuto,
-          description Tasa de generación de logs en el namespace smart-campus,
-          type timeseries,
-          gridPos { h 8, w 12, x 0, y 0 },
-          datasource { type loki, uid ${datasource} },
-          targets [
+          "id": 1,
+          "title": "Volumen de logs por minuto",
+          "description": "Tasa de generación de logs en el namespace smart-campus",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
             {
-              expr sum(rate({namespace=smart-campus} [1m])),
-              legendFormat Total logsmin,
-              refId A
+              "expr": "sum(rate({namespace=\"smart-campus\"} [1m]))",
+              "legendFormat": "Total logs/min",
+              "refId": "A"
             },
             {
-              expr sum(rate({namespace=smart-campus} = ERROR [1m])),
-              legendFormat Erroresmin,
-              refId B
+              "expr": "sum(rate({namespace=\"smart-campus\"} |= \"ERROR\" [1m]))",
+              "legendFormat": "Errores/min",
+              "refId": "B"
             }
           ],
-          fieldConfig {
-            defaults {
-              color { mode palette-classic },
-              custom {
-                axisBorderShow false,
-                axisCenteredZero false,
-                axisColorMode text,
-                axisLabel ,
-                axisPlacement auto,
-                barAlignment 0,
-                drawStyle line,
-                fillOpacity 10,
-                gradientMode none,
-                hideFrom { legend false, tooltip false, viz false },
-                lineInterpolation smooth,
-                lineWidth 2,
-                pointSize 5,
-                scaleDistribution { type linear },
-                showPoints never,
-                spanNulls false,
-                stacking { group A, mode none },
-                thresholdsStyle { mode off }
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
               },
-              unit short
+              "unit": "short"
             }
           },
-          options {
-            legend { calcs [mean, max], displayMode table, placement bottom },
-            tooltip { mode multi, sort desc }
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi", "sort": "desc" }
           }
         },
         {
-          id 2,
-          title Errores por servicio (última hora),
-          description Cantidad de errores agrupados por aplicación,
-          type barchart,
-          gridPos { h 8, w 12, x 12, y 0 },
-          datasource { type loki, uid ${datasource} },
-          targets [
+          "id": 2,
+          "title": "Errores por servicio (última hora)",
+          "description": "Cantidad de errores agrupados por aplicación",
+          "type": "barchart",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
             {
-              expr sum by (app) (count_over_time({namespace=smart-campus, app=~.+} = ERROR [1h])),
-              legendFormat {{app}},
-              refId A
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\".+\"} |= \"ERROR\" [1h]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
+              "refId": "A"
             }
           ],
-          fieldConfig {
-            defaults {
-              color { mode palette-classic },
-              unit short
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short"
             }
           },
-          options {
-            orientation horizontal,
-            showValue always,
-            groupWidth 0.7,
-            barWidth 0.8
+          "options": {
+            "orientation": "horizontal",
+            "showValue": "always",
+            "groupWidth": 0.7,
+            "barWidth": 0.8
           }
         },
         {
-          id 3,
-          title Distribución de logs por pod,
-          description Proporción de logs generados por cada pod,
-          type piechart,
-          gridPos { h 8, w 8, x 0, y 8 },
-          datasource { type loki, uid ${datasource} },
-          targets [
+          "id": 3,
+          "title": "Distribución de logs por pod",
+          "description": "Proporción de logs generados por cada pod",
+          "type": "piechart",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
             {
-              expr sum by (pod) (count_over_time({namespace=smart-campus} [1h])),
-              legendFormat {{pod}},
-              refId A
+              "expr": "sum by (pod) (count_over_time({namespace=\"smart-campus\"} [1h]))",
+              "legendFormat": "{{ "{{" }}pod{{ "}}" }}",
+              "refId": "A"
             }
           ],
-          fieldConfig {
-            defaults {
-              color { mode palette-classic }
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" }
             }
           },
-          options {
-            legend { displayMode table, placement right, values [percent] },
-            pieType donut,
-            reduceOptions { calcs [sum], fields , values false }
+          "options": {
+            "legend": { "displayMode": "table", "placement": "right", "values": ["percent"] },
+            "pieType": "donut",
+            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
           }
         },
         {
-          id 4,
-          title Estadísticas rápidas,
-          description Contadores de logs y errores,
-          type stat,
-          gridPos { h 4, w 8, x 8, y 8 },
-          datasource { type loki, uid ${datasource} },
-          targets [
+          "id": 4,
+          "title": "Estadísticas rápidas",
+          "description": "Contadores de logs y errores",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 8 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
             {
-              expr count_over_time({namespace=smart-campus} [1h]),
-              legendFormat Total logs (1h),
-              refId A
+              "expr": "count_over_time({namespace=\"smart-campus\"} [1h])",
+              "legendFormat": "Total logs (1h)",
+              "refId": "A"
             }
           ],
-          fieldConfig {
-            defaults {
-              color { mode thresholds },
-              thresholds {
-                mode absolute,
-                steps [
-                  { color green, value null },
-                  { color yellow, value 5000 },
-                  { color red, value 10000 }
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 5000 },
+                  { "color": "red", "value": 10000 }
                 ]
               },
-              unit short
+              "unit": "short"
             }
           },
-          options {
-            colorMode background,
-            graphMode area,
-            justifyMode center,
-            orientation horizontal,
-            reduceOptions { calcs [sum], fields , values false },
-            textMode auto
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+            "textMode": "auto"
           }
         },
         {
-          id 5,
-          title Errores totales (última hora),
-          type stat,
-          gridPos { h 4, w 8, x 8, y 12 },
-          datasource { type loki, uid ${datasource} },
-          targets [
+          "id": 5,
+          "title": "Errores totales (última hora)",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 12 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
             {
-              expr count_over_time({namespace=smart-campus} = ERROR [1h]),
-              legendFormat Errores,
-              refId A
+              "expr": "count_over_time({namespace=\"smart-campus\"} |= \"ERROR\" [1h])",
+              "legendFormat": "Errores",
+              "refId": "A"
             }
           ],
-          fieldConfig {
-            defaults {
-              color { mode thresholds },
-              thresholds {
-                mode absolute,
-                steps [
-                  { color green, value null },
-                  { color yellow, value 10 },
-                  { color red, value 50 }
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 10 },
+                  { "color": "red", "value": 50 }
                 ]
               },
-              unit short
+              "unit": "short"
             }
           },
-          options {
-            colorMode background,
-            graphMode area,
-            justifyMode center,
-            orientation horizontal,
-            reduceOptions { calcs [sum], fields , values false },
-            textMode auto
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+            "textMode": "auto"
           }
         },
         {
-          id 6,
-          title Actividad de logs por servicio,
-          description Heatmap de actividad por aplicación a lo largo del tiempo,
-          type timeseries,
-          gridPos { h 8, w 8, x 16, y 8 },
-          datasource { type loki, uid ${datasource} },
-          targets [
+          "id": 6,
+          "title": "Actividad de logs por servicio",
+          "description": "Heatmap de actividad por aplicación a lo largo del tiempo",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
             {
-              expr sum by (app) (rate({namespace=smart-campus, app=~.+} [5m])),
-              legendFormat {{app}},
-              refId A
+              "expr": "sum by (app) (rate({namespace=\"smart-campus\", app=~\".+\"} [5m]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
+              "refId": "A"
             }
           ],
-          fieldConfig {
-            defaults {
-              color { mode palette-classic },
-              custom {
-                drawStyle bars,
-                fillOpacity 80,
-                stacking { group A, mode normal }
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 80,
+                "stacking": { "group": "A", "mode": "normal" }
               },
-              unit short
+              "unit": "short"
             }
           },
-          options {
-            legend { calcs [], displayMode list, placement bottom }
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }
           }
         },
         {
-          id 7,
-          title Últimos errores y warnings,
-          description Logs recientes con nivel ERROR o WARN,
-          type logs,
-          gridPos { h 10, w 24, x 0, y 16 },
-          datasource { type loki, uid ${datasource} },
-          targets [
+          "id": 7,
+          "title": "Últimos errores y warnings",
+          "description": "Logs recientes con nivel ERROR o WARN",
+          "type": "logs",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
             {
-              expr {namespace=smart-campus} ~ (i)(errorwarnexceptionfailedfailure),
-              refId A
+              "expr": "{namespace=\"smart-campus\"} |~ \"(?i)(error|warn|exception|failed|failure)\"",
+              "refId": "A"
             }
           ],
-          options {
-            dedupStrategy none,
-            enableLogDetails true,
-            prettifyLogMessage false,
-            showCommonLabels false,
-            showLabels true,
-            showTime true,
-            sortOrder Descending,
-            wrapLogMessage true
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": true,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
           }
         }
       ],
-      refresh 30s,
-      schemaVersion 39,
-      tags [smart-campus, loki, overview],
-      templating {
-        list [
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["smart-campus", "loki", "overview"],
+      "templating": {
+        "list": [
           {
-            current { selected false, text Loki, value Loki },
-            hide 0,
-            includeAll false,
-            label Datasource,
-            multi false,
-            name datasource,
-            options [],
-            query loki,
-            queryValue ,
-            refresh 1,
-            regex ,
-            skipUrlSync false,
-            type datasource
+            "current": { "selected": false, "text": "Loki", "value": "Loki" },
+            "hide": 0,
+            "includeAll": false,
+            "label": "Datasource",
+            "multi": false,
+            "name": "datasource",
+            "options": [],
+            "query": "loki",
+            "queryValue": "",
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "type": "datasource"
           }
         ]
       },
-      time { from now-1h, to now },
-      timepicker {},
-      timezone browser,
-      title Smart Campus - Overview,
-      uid smart-campus-overview,
-      version 1
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Smart Campus - Overview",
+      "uid": "smart-campus-overview",
+      "version": 1
     }
 {{- end }}
