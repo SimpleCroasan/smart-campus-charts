@@ -1,0 +1,245 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-smart-campus-microservices
+  namespace: {{ .Values.grafana.namespaceOverride | default .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  smart-campus-microservices.json: |
+    {
+      "annotations": { "list": [] },
+      "description": "Monitoreo de microservicios Smart Campus - admin y data",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "id": 1,
+          "title": "Comparación de actividad: admin vs data",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "sum(rate({namespace=\"smart-campus\", app=\"admin\"} [1m]))",
+              "legendFormat": "admin",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate({namespace=\"smart-campus\", app=\"data\"} [1m]))",
+              "legendFormat": "data",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max", "sum"], "displayMode": "table", "placement": "right" }
+          }
+        },
+        {
+          "id": 2,
+          "title": "Errores en admin (última hora)",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 7 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "count_over_time({namespace=\"smart-campus\", app=\"admin\"} |= \"ERROR\" [1h])",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 5 },
+                  { "color": "red", "value": 20 }
+                ]
+              }
+            }
+          },
+          "options": { "colorMode": "background", "graphMode": "area" }
+        },
+        {
+          "id": 3,
+          "title": "Errores en data (última hora)",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 7 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "count_over_time({namespace=\"smart-campus\", app=\"data\"} |= \"ERROR\" [1h])",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 5 },
+                  { "color": "red", "value": 20 }
+                ]
+              }
+            }
+          },
+          "options": { "colorMode": "background", "graphMode": "area" }
+        },
+        {
+          "id": 4,
+          "title": "Conexiones fallidas a bases de datos",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 7 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(connection refused|connection reset|timeout|unable to connect)\" [1h])",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "orange", "value": 1 },
+                  { "color": "red", "value": 5 }
+                ]
+              }
+            }
+          },
+          "options": { "colorMode": "background", "graphMode": "area" }
+        },
+        {
+          "id": 5,
+          "title": "Reinicios detectados",
+          "description": "Logs que indican inicio de aplicación",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 7 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(started|starting|initialized|bootstrap)\" [1h])",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "steps": [
+                  { "color": "blue", "value": null },
+                  { "color": "yellow", "value": 3 },
+                  { "color": "red", "value": 10 }
+                ]
+              }
+            }
+          },
+          "options": { "colorMode": "background", "graphMode": "area" }
+        },
+        {
+          "id": 6,
+          "title": "Logs de admin",
+          "type": "logs",
+          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 11 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"admin\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          }
+        },
+        {
+          "id": 7,
+          "title": "Logs de data",
+          "type": "logs",
+          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 11 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"data\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          }
+        },
+        {
+          "id": 8,
+          "title": "Excepciones Java / Stack Traces",
+          "description": "Errores con stack trace de los microservicios Spring Boot",
+          "type": "logs",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 21 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=~\"admin|data\"} |~ \"(?i)(exception|caused by|at [a-z]+\\\\.[a-z]+)\"",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "showLabels": true,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          }
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["smart-campus", "loki", "microservices"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": false, "text": "Loki", "value": "Loki" },
+            "hide": 0,
+            "label": "Datasource",
+            "name": "datasource",
+            "query": "loki",
+            "refresh": 1,
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "Smart Campus - Microservicios",
+      "uid": "smart-campus-microservices",
+      "version": 1
+    }
+{{- end }}

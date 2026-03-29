@@ -1,0 +1,231 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-smart-campus-infrastructure
+  namespace: {{ .Values.grafana.namespaceOverride | default .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  smart-campus-infrastructure.json: |
+    {
+      "annotations": { "list": [] },
+      "description": "Infraestructura Smart Campus - bases de datos, brokers, almacenamiento",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "id": 1,
+          "title": "Actividad por componente de infraestructura",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "sum by (app) (rate({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} [5m]))",
+              "legendFormat": "{{app}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2
+              }
+            }
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" }
+          }
+        },
+        {
+          "id": 2,
+          "title": "Errores en infraestructura (última hora)",
+          "type": "barchart",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 7 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]| ERROR:| PANIC:|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [1h]))",
+              "legendFormat": "{{app}}",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "decimals": 0,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 3 },
+                  { "color": "orange", "value": 5 },
+                  { "color": "red", "value": 10 }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "orientation": "vertical",
+            "showValue": "always",
+            "barWidth": 0.7,
+            "groupWidth": 0.8,
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 100,
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }
+          }
+        },
+        {
+          "id": 4,
+          "title": "PostgreSQL - Logs",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"postgres\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        },
+        {
+          "id": 5,
+          "title": "MongoDB - Logs importantes",
+          "description": "Errores, warnings, startup/shutdown, slow queries (>100ms)",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"mongodb\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|\\\"s\\\":\\\"W\\\"|Assertion while executing|mongod startup complete|mongod shutdown complete|Received signal|durationMillis\\\":[1-9][0-9]{2,})\" !~ \"(atlasVersion|getParameter)\"",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        },
+        {
+          "id": 6,
+          "title": "RabbitMQ - Logs",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"rabbitmq\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        },
+        {
+          "id": 7,
+          "title": "EMQX (MQTT) - Logs",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"emqx\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        },
+        {
+          "id": 8,
+          "title": "InfluxDB - Logs",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"influxdb\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        },
+        {
+          "id": 9,
+          "title": "MinIO - Logs",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "targets": [
+            {
+              "expr": "{namespace=\"smart-campus\", app=\"minio\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["smart-campus", "loki", "infrastructure"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": false, "text": "Loki", "value": "Loki" },
+            "hide": 0,
+            "label": "Datasource",
+            "name": "datasource",
+            "query": "loki",
+            "refresh": 1,
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "Smart Campus - Infraestructura",
+      "uid": "smart-campus-infrastructure",
+      "version": 1
+    }
+{{- end }}

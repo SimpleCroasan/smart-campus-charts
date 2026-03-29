@@ -369,6 +369,12 @@ alloy:
 grafana:
   namespaceOverride: monitoring
   adminPassword: admin
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: monitoring
   grafana.ini:
     server:
       root_url: "http://%(domain)s/grafana"
