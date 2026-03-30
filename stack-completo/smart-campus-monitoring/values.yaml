@@ -465,6 +465,17 @@ grafana:
               hide: false
             lokiSearch:
               datasourceUid: loki
+
+        # ── Alertmanager ──────────────────────────────────────────
+        - name: Alertmanager
+          type: alertmanager
+          uid: alertmanager
+          url: http://monitoring-alertmanager.monitoring.svc.cluster.local:9093
+          access: proxy
+          isDefault: false
+          jsonData:
+            handleGrafanaManagedAlerts: false
+            implementation: prometheus
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -508,7 +519,72 @@ prometheus:
                     - observability
     priorityClassName: observability-low-priority
   alertmanager:
-    enabled: false
+    enabled: true
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClass: "local-path"
+    priorityClassName: observability-low-priority
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_by: ['alertname', 'app']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+        receiver: 'null'
+      receivers:
+        - name: 'null'
+  serverFiles:
+    alerting_rules.yml:
+      groups:
+        - name: smart-campus
+          interval: 30s
+          rules:
+
+            - alert: ServicioCaido
+              expr: absent(up{app="admin"}) or up{app="admin"} == 0 or absent(up{app="data"}) or up{app="data"} == 0
+              for: 1m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Servicio caído"
+                description: "Un pod de admin o data lleva más de 1 minuto sin responder."
+
+            - alert: MemoriaHeapCritica
+              expr: >
+                sum by (app) (jvm_memory_used_bytes{area="heap", app=~"admin|data"})
+                /
+                sum by (app) (clamp_min(jvm_memory_max_bytes{area="heap", app=~"admin|data"}, 1))
+                > 0.90
+              for: 5m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Heap JVM crítico"
+                description: "El heap de un microservicio está por encima del 90%. Riesgo de OutOfMemoryError."
+
+            - alert: CPUAltaSostenida
+              expr: avg by (app) (process_cpu_usage{app=~"admin|data"}) > 0.80
+              for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: "CPU alta sostenida"
+                description: "Un microservicio lleva 5 minutos usando más del 80% de CPU."
+
+            - alert: ErroresHTTP
+              expr: >
+                sum by (app) (rate(http_server_requests_seconds_count{app=~"admin|data", status=~"5.."}[5m]))
+                > 0.1
+              for: 2m
+              labels:
+                severity: warning
+              annotations:
+                summary: "Errores HTTP 5xx detectados"
+                description: "Un endpoint está devolviendo errores del servidor a más de 0.1 req/s."
+
   prometheus-pushgateway:
     enabled: false
   kube-state-metrics:

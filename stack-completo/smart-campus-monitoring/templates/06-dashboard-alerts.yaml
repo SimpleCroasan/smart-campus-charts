@@ -1,0 +1,216 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-smart-campus-alerts
+  namespace: {{ .Values.grafana.namespaceOverride | default .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  smart-campus-alerts.json: |
+    {
+      "annotations": { "list": [] },
+      "description": "Alertas y rendimiento de microservicios Smart Campus",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+
+        {
+          "id": 1,
+          "title": "Estado de servicios",
+          "description": "1 tile por servicio. Verde = respondiendo, Rojo = caído.",
+          "type": "stat",
+          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "max by (app) (up{app=~\"admin|data\"})",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": { "text": "CAÍDO", "color": "red"   },
+                    "1": { "text": "OK",    "color": "green" }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red",   "value": null },
+                  { "color": "green", "value": 1    }
+                ]
+              },
+              "color": { "mode": "thresholds" }
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value_and_name",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          }
+        },
+
+        {
+          "id": 2,
+          "title": "CPU del proceso Java",
+          "description": "Uso de CPU promedio por servicio. Umbral warning 60%, crítico 80%.",
+          "type": "timeseries",
+          "gridPos": { "h": 5, "w": 9, "x": 6, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "avg by (app) (process_cpu_usage{app=~\"admin|data\"})",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 2,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "orange", "value": 0.6  },
+                  { "color": "red",    "value": 0.8  }
+                ]
+              },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 3,
+          "title": "Heap JVM usado (%)",
+          "description": "Porcentaje de heap consumido por servicio. Umbral warning 70%, crítico 90%.",
+          "type": "timeseries",
+          "gridPos": { "h": 5, "w": 9, "x": 15, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (app) (jvm_memory_used_bytes{area=\"heap\", app=~\"admin|data\"}) / sum by (app) (clamp_min(jvm_memory_max_bytes{area=\"heap\", app=~\"admin|data\"}, 1))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 2,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "orange", "value": 0.7  },
+                  { "color": "red",    "value": 0.9  }
+                ]
+              },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 12,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 4,
+          "title": "Errores HTTP 5xx",
+          "description": "Tasa de errores de servidor por servicio. En condiciones normales debe ser 0.",
+          "type": "timeseries",
+          "gridPos": { "h": 5, "w": 24, "x": 0, "y": 5 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (app) (rate(http_server_requests_seconds_count{app=\"admin\", status=~\"5..\"}[5m])) or vector(0)",
+              "legendFormat": "admin"
+            },
+            {
+              "expr": "sum by (app) (rate(http_server_requests_seconds_count{app=\"data\", status=~\"5..\"}[5m])) or vector(0)",
+              "legendFormat": "data"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 2,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 5,
+          "title": "Alertas activas",
+          "description": "Alertas en estado firing o pending. Sin alertas = sistema estable.",
+          "type": "alertlist",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 10 },
+          "datasource": { "type": "alertmanager", "uid": "alertmanager" },
+          "options": {
+            "groupMode": "default",
+            "maxItems": 20,
+            "sortOrder": 1,
+            "stateFilter": {
+              "firing":  true,
+              "pending": true,
+              "noData":  true,
+              "normal":  false,
+              "error":   true
+            },
+            "alertInstanceLabelFilter": "{app=~\"admin|data\"}"
+          }
+        }
+
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["smart-campus", "alerts", "prometheus"],
+      "templating": { "list": [] },
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "Smart Campus - Alertas y rendimiento",
+      "uid": "smart-campus-alerts",
+      "version": 4
+    }
+{{- end }}
