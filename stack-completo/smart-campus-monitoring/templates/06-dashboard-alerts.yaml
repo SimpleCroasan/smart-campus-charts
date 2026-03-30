@@ -28,7 +28,8 @@ data:
             {
               "expr": "max by (app) (up{app=~\"admin|data\"})",
               "legendFormat": "{{ "{{" }}app{{ "}}" }}",
-              "instant": true
+              "instant": false,
+              "range": true
             }
           ],
           "fieldConfig": {
@@ -58,7 +59,7 @@ data:
             "textMode": "value_and_name",
             "justifyMode": "center",
             "orientation": "horizontal",
-            "reduceOptions": { "calcs": ["lastNotNull"] }
+            "reduceOptions": { "calcs": ["last"] }
           }
         },
 
@@ -146,19 +147,19 @@ data:
 
         {
           "id": 4,
-          "title": "Errores HTTP 5xx",
-          "description": "Tasa de errores de servidor por servicio. En condiciones normales debe ser 0.",
+          "title": "Errores HTTP 4xx y 5xx por endpoint",
+          "description": "Tasa de errores agrupada por servicio, endpoint y código de estado. Solo aparecen líneas cuando hay errores activos.",
           "type": "timeseries",
-          "gridPos": { "h": 5, "w": 24, "x": 0, "y": 5 },
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 5 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
-              "expr": "sum by (app) (rate(http_server_requests_seconds_count{app=\"admin\", status=~\"5..\"}[5m])) or vector(0)",
-              "legendFormat": "admin"
+              "expr": "sum by (app, uri, status) (rate(http_server_requests_seconds_count{app=\"admin\", status=~\"4..|5..\"}[5m]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }} {{ "{{" }}status{{ "}}" }} {{ "{{" }}uri{{ "}}" }}"
             },
             {
-              "expr": "sum by (app) (rate(http_server_requests_seconds_count{app=\"data\", status=~\"5..\"}[5m])) or vector(0)",
-              "legendFormat": "data"
+              "expr": "sum by (app, uri, status) (rate(http_server_requests_seconds_count{app=\"data\", status=~\"4..|5..\"}[5m]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }} {{ "{{" }}status{{ "}}" }} {{ "{{" }}uri{{ "}}" }}"
             }
           ],
           "fieldConfig": {
@@ -166,7 +167,7 @@ data:
               "unit": "reqps",
               "decimals": 2,
               "min": 0,
-              "color": { "mode": "palette-classic" },
+              "color": { "fixedColor": "red", "mode": "fixed" },
               "custom": {
                 "lineWidth": 2,
                 "fillOpacity": 15,
@@ -176,7 +177,7 @@ data:
             }
           },
           "options": {
-            "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] },
             "tooltip": { "mode": "multi", "sort": "desc" }
           }
         },
@@ -186,7 +187,7 @@ data:
           "title": "Alertas activas",
           "description": "Alertas en estado firing o pending. Sin alertas = sistema estable.",
           "type": "alertlist",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 10 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
           "datasource": { "type": "alertmanager", "uid": "alertmanager" },
           "options": {
             "groupMode": "default",
@@ -211,6 +212,6 @@ data:
       "time": { "from": "now-1h", "to": "now" },
       "title": "Smart Campus - Alertas y rendimiento",
       "uid": "smart-campus-alerts",
-      "version": 4
+      "version": 8
     }
 {{- end }}

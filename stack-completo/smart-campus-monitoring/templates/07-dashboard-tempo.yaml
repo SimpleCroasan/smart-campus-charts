@@ -1,0 +1,181 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-smart-campus-tempo
+  namespace: {{ .Values.grafana.namespaceOverride | default .Release.Namespace }}
+  labels:
+    grafana_dashboard: "1"
+data:
+  smart-campus-tempo.json: |
+    {
+      "annotations": { "list": [] },
+      "description": "Trazas distribuidas y latencia de microservicios Smart Campus",
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+
+        {
+          "id": 1,
+          "title": "Trazas recientes — admin",
+          "description": "Lista de trazas recientes del servicio admin. Haz clic en el Trace ID para ver el detalle de spans en Explore.",
+          "type": "table",
+          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "targets": [
+            {
+              "queryType": "traceql",
+              "query": "{resource.service.name=\"admin\"}",
+              "limit": 15,
+              "tableType": "traces",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "sortBy": [{ "displayName": "Start time", "desc": true }]
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "filterable": true }
+            }
+          }
+        },
+
+        {
+          "id": 2,
+          "title": "Trazas recientes — data",
+          "description": "Lista de trazas recientes del servicio data. Haz clic en el Trace ID para ver el detalle de spans en Explore.",
+          "type": "table",
+          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "targets": [
+            {
+              "queryType": "traceql",
+              "query": "{resource.service.name=\"data\"}",
+              "limit": 15,
+              "tableType": "traces",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "sortBy": [{ "displayName": "Start time", "desc": true }]
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "filterable": true }
+            }
+          }
+        },
+
+        {
+          "id": 3,
+          "title": "Latencia promedio por endpoint — admin",
+          "description": "Tiempo promedio de respuesta por endpoint, excluyendo actuator. Permite identificar qué operaciones son más costosas.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (uri) (rate(http_server_requests_seconds_sum{app=\"admin\", uri!~\"/actuator.*\"}[5m])) / sum by (uri) (rate(http_server_requests_seconds_count{app=\"admin\", uri!~\"/actuator.*\"}[5m]))",
+              "legendFormat": "{{ "{{" }}uri{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 4,
+          "title": "Latencia promedio por endpoint — data",
+          "description": "Tiempo promedio de respuesta por endpoint, excluyendo actuator. Permite identificar qué operaciones son más costosas.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (uri) (rate(http_server_requests_seconds_sum{app=\"data\", uri!~\"/actuator.*\"}[5m])) / sum by (uri) (rate(http_server_requests_seconds_count{app=\"data\", uri!~\"/actuator.*\"}[5m]))",
+              "legendFormat": "{{ "{{" }}uri{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 5,
+          "title": "Tasa de peticiones por servicio",
+          "description": "Requests por segundo recibidos por cada microservicio, excluyendo actuator.",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 18 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (app) (rate(http_server_requests_seconds_count{app=~\"admin|data\", uri!~\"/actuator.*\"}[5m]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 2,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        }
+
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["smart-campus", "tempo", "trazas", "latencia"],
+      "templating": { "list": [] },
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "Smart Campus - Trazas y latencia",
+      "uid": "smart-campus-tempo",
+      "version": 5
+    }
+{{- end }}
