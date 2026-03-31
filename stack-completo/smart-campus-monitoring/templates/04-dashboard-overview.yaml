@@ -9,9 +9,7 @@ metadata:
 data:
   smart-campus-overview.json: |
     {
-      "annotations": {
-        "list": []
-      },
+      "annotations": { "list": [] },
       "description": "Vista general del sistema Smart Campus UIS - logs, errores y actividad",
       "editable": true,
       "fiscalYearStartMonth": 0,
@@ -27,12 +25,12 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum(rate({namespace=\"smart-campus\"} [1m]))",
+              "expr": "sum(rate({namespace=\"smart-campus\"} [$__interval]))",
               "legendFormat": "Total logs/min",
               "refId": "A"
             },
             {
-              "expr": "sum(rate({namespace=\"smart-campus\"} |= \"ERROR\" [1m]))",
+              "expr": "sum(rate({namespace=\"smart-campus\"} |= \"ERROR\" [$__interval]))",
               "legendFormat": "Errores/min",
               "refId": "B"
             }
@@ -70,14 +68,14 @@ data:
         },
         {
           "id": 2,
-          "title": "Errores por servicio (última hora)",
-          "description": "Cantidad de errores agrupados por aplicación",
+          "title": "Errores por servicio",
+          "description": "Cantidad de errores agrupados por aplicación en el rango seleccionado",
           "type": "barchart",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\".+\"} |= \"ERROR\" [1h]))",
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\".+\"} |= \"ERROR\" [$__range]))",
               "legendFormat": "{{ "{{" }}app{{ "}}" }}",
               "refId": "A"
             }
@@ -98,13 +96,13 @@ data:
         {
           "id": 3,
           "title": "Distribución de logs por pod",
-          "description": "Proporción de logs generados por cada pod",
+          "description": "Proporción de logs generados por cada pod en el rango seleccionado",
           "type": "piechart",
           "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (pod) (count_over_time({namespace=\"smart-campus\"} [1h]))",
+              "expr": "sum by (pod) (count_over_time({namespace=\"smart-campus\"} [$__range]))",
               "legendFormat": "{{ "{{" }}pod{{ "}}" }}",
               "refId": "A"
             }
@@ -123,14 +121,14 @@ data:
         {
           "id": 4,
           "title": "Estadísticas rápidas",
-          "description": "Contadores de logs y errores",
+          "description": "Contadores de logs en el rango seleccionado",
           "type": "stat",
           "gridPos": { "h": 4, "w": 8, "x": 8, "y": 8 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\"} [1h])",
-              "legendFormat": "Total logs (1h)",
+              "expr": "count_over_time({namespace=\"smart-campus\"} [$__range])",
+              "legendFormat": "Total logs",
               "refId": "A"
             }
           ],
@@ -159,13 +157,14 @@ data:
         },
         {
           "id": 5,
-          "title": "Errores totales (última hora)",
+          "title": "Errores totales",
+          "description": "Errores en el rango seleccionado",
           "type": "stat",
           "gridPos": { "h": 4, "w": 8, "x": 8, "y": 12 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\"} |= \"ERROR\" [1h])",
+              "expr": "count_over_time({namespace=\"smart-campus\"} |= \"ERROR\" [$__range])",
               "legendFormat": "Errores",
               "refId": "A"
             }
@@ -196,13 +195,13 @@ data:
         {
           "id": 6,
           "title": "Actividad de logs por servicio",
-          "description": "Heatmap de actividad por aplicación a lo largo del tiempo",
+          "description": "Actividad por aplicación a lo largo del tiempo",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (rate({namespace=\"smart-campus\", app=~\".+\"} [5m]))",
+              "expr": "sum by (app) (rate({namespace=\"smart-campus\", app=~\".+\"} [$__interval]))",
               "legendFormat": "{{ "{{" }}app{{ "}}" }}",
               "refId": "A"
             }

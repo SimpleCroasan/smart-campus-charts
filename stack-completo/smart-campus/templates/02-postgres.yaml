@@ -46,6 +46,21 @@ spec:
           image: postgres:16
           ports:
             - containerPort: 5432
+          args:
+            # Loguea queries que superen 100ms — detecta problemas de rendimiento
+            - -c
+            - log_min_duration_statement=100
+            # Loguea conexiones entrantes y desconexiones con duración de sesión
+            - -c
+            - log_connections=on
+            - -c
+            - log_disconnections=on
+            # Loguea checkpoints para monitorear el WAL
+            - -c
+            - log_checkpoints=on
+            # Formato de log con timestamp, PID y usuario/base de datos
+            - -c
+            - log_line_prefix=%t [%p] %q%u@%d
           env:
             - name: POSTGRES_USER
               valueFrom:

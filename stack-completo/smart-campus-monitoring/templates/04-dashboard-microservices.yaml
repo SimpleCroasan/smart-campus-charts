@@ -24,12 +24,12 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum(rate({namespace=\"smart-campus\", app=\"admin\"} [1m]))",
+              "expr": "sum(rate({namespace=\"smart-campus\", app=\"admin\"} [$__interval]))",
               "legendFormat": "admin",
               "refId": "A"
             },
             {
-              "expr": "sum(rate({namespace=\"smart-campus\", app=\"data\"} [1m]))",
+              "expr": "sum(rate({namespace=\"smart-campus\", app=\"data\"} [$__interval]))",
               "legendFormat": "data",
               "refId": "B"
             }
@@ -53,13 +53,14 @@ data:
         },
         {
           "id": 2,
-          "title": "Errores en admin (última hora)",
+          "title": "Errores en admin",
+          "description": "Errores en el rango seleccionado",
           "type": "stat",
           "gridPos": { "h": 4, "w": 6, "x": 0, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\", app=\"admin\"} |= \"ERROR\" [1h])",
+              "expr": "count_over_time({namespace=\"smart-campus\", app=\"admin\"} |= \"ERROR\" [$__range])",
               "refId": "A"
             }
           ],
@@ -79,13 +80,14 @@ data:
         },
         {
           "id": 3,
-          "title": "Errores en data (última hora)",
+          "title": "Errores en data",
+          "description": "Errores en el rango seleccionado",
           "type": "stat",
           "gridPos": { "h": 4, "w": 6, "x": 6, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\", app=\"data\"} |= \"ERROR\" [1h])",
+              "expr": "count_over_time({namespace=\"smart-campus\", app=\"data\"} |= \"ERROR\" [$__range])",
               "refId": "A"
             }
           ],
@@ -106,12 +108,13 @@ data:
         {
           "id": 4,
           "title": "Conexiones fallidas a bases de datos",
+          "description": "En el rango seleccionado",
           "type": "stat",
           "gridPos": { "h": 4, "w": 6, "x": 12, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(connection refused|connection reset|timeout|unable to connect)\" [1h])",
+              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(connection refused|connection reset|timeout|unable to connect)\" [$__range])",
               "refId": "A"
             }
           ],
@@ -132,13 +135,13 @@ data:
         {
           "id": 5,
           "title": "Reinicios detectados",
-          "description": "Logs que indican inicio de aplicación",
+          "description": "Logs que indican inicio de aplicación en el rango seleccionado",
           "type": "stat",
           "gridPos": { "h": 4, "w": 6, "x": 18, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(started|starting|initialized|bootstrap)\" [1h])",
+              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(started|starting|initialized|bootstrap)\" [$__range])",
               "refId": "A"
             }
           ],

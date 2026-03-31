@@ -18,44 +18,60 @@ data:
       "panels": [
         {
           "id": 1,
-          "title": "Actividad por componente de infraestructura",
-          "type": "timeseries",
+          "title": "Volumen de logs por componente",
+          "description": "Total de logs generados por cada componente en el rango seleccionado",
+          "type": "barchart",
           "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (rate({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} [5m]))",
-              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
-              "refId": "A"
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} [$__range]))",
+              "legendFormat": "",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": { "valueLabel": "app" }
             }
           ],
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
-              "custom": {
-                "drawStyle": "line",
-                "fillOpacity": 15,
-                "lineInterpolation": "smooth",
-                "lineWidth": 2
-              }
+              "unit": "short",
+              "decimals": 0,
+              "min": 0
             }
           },
           "options": {
-            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" }
+            "orientation": "horizontal",
+            "showValue": "always",
+            "barWidth": 0.7,
+            "groupWidth": 0.8,
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }
           }
         },
         {
           "id": 2,
-          "title": "Errores en infraestructura (última hora)",
+          "title": "Errores en infraestructura",
+          "description": "Errores por componente en el rango seleccionado",
           "type": "barchart",
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]| ERROR:| PANIC:|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [1h]))",
-              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]| ERROR:| PANIC:|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [$__range]))",
+              "legendFormat": "",
               "refId": "A",
               "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": { "valueLabel": "app" }
             }
           ],
           "fieldConfig": {
@@ -89,11 +105,11 @@ data:
           "id": 4,
           "title": "PostgreSQL - Logs",
           "type": "logs",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"postgres\"}",
+              "expr": "{namespace=\"smart-campus\", app=\"postgres\"} |~ \"${nivel_postgres:raw}\"",
               "refId": "A"
             }
           ],
@@ -107,14 +123,14 @@ data:
         },
         {
           "id": 5,
-          "title": "MongoDB - Logs importantes",
-          "description": "Errores, warnings, startup/shutdown, slow queries (>100ms)",
+          "title": "MongoDB - Logs relevantes",
+          "description": "Errores, warnings, queries lentas (>100ms), conexiones e inicio/apagado",
           "type": "logs",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"mongodb\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|\\\"s\\\":\\\"W\\\"|Assertion while executing|mongod startup complete|mongod shutdown complete|Received signal|durationMillis\\\":[1-9][0-9]{2,})\" !~ \"(atlasVersion|getParameter)\"",
+              "expr": "{namespace=\"smart-campus\", app=\"mongodb\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|\\\"s\\\":\\\"W\\\"|durationMillis|connection accepted|connection ended|mongod startup complete|mongod shutdown complete|Received signal)\" |~ \"${nivel_mongodb}\"",
               "refId": "A"
             }
           ],
@@ -130,11 +146,11 @@ data:
           "id": 6,
           "title": "RabbitMQ - Logs",
           "type": "logs",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"rabbitmq\"}",
+              "expr": "{namespace=\"smart-campus\", app=\"rabbitmq\"} |~ \"${nivel_rabbitmq}\"",
               "refId": "A"
             }
           ],
@@ -150,11 +166,11 @@ data:
           "id": 7,
           "title": "EMQX (MQTT) - Logs",
           "type": "logs",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"emqx\"}",
+              "expr": "{namespace=\"smart-campus\", app=\"emqx\"} |~ \"${nivel_emqx}\"",
               "refId": "A"
             }
           ],
@@ -170,11 +186,11 @@ data:
           "id": 8,
           "title": "InfluxDB - Logs",
           "type": "logs",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"influxdb\"}",
+              "expr": "{namespace=\"smart-campus\", app=\"influxdb\"} |~ \"${nivel_influxdb}\"",
               "refId": "A"
             }
           ],
@@ -190,11 +206,11 @@ data:
           "id": 9,
           "title": "MinIO - Logs",
           "type": "logs",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"minio\"}",
+              "expr": "{namespace=\"smart-campus\", app=\"minio\"} !~ \"(health|ready|liveness|readiness)\" |~ \"${nivel_minio}\"",
               "refId": "A"
             }
           ],
@@ -220,6 +236,116 @@ data:
             "query": "loki",
             "refresh": 1,
             "type": "datasource"
+          },
+          {
+            "name": "nivel_postgres",
+            "label": "PostgreSQL - Nivel",
+            "type": "custom",
+            "hide": 0,
+            "refresh": 0,
+            "includeAll": true,
+            "allValue": "LOG:|ERROR:|WARNING:|duration:|connection received|connection authorized|disconnection",
+            "multi": false,
+            "query": "Error : ERROR:,Warning : WARNING:,Info : LOG:,Queries lentas : duration:,Conexiones : connection received|connection authorized|disconnection",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "text": "Error",          "value": "ERROR:",       "selected": false },
+              { "text": "Warning",        "value": "WARNING:",     "selected": false },
+              { "text": "Info",           "value": "LOG:",         "selected": false },
+              { "text": "Queries lentas", "value": "duration:",    "selected": false },
+              { "text": "Conexiones",     "value": "connection received|connection authorized|disconnection", "selected": false }
+            ],
+            "skipUrlSync": false
+          },
+          {
+            "name": "nivel_mongodb",
+            "label": "MongoDB - Nivel",
+            "type": "custom",
+            "hide": 0,
+            "refresh": 0,
+            "includeAll": true,
+            "allValue": "\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|\\\"s\\\":\\\"W\\\"|durationMillis|connection|mongod",
+            "multi": false,
+            "query": "Error : \\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\",Warning : \\\"s\\\":\\\"W\\\",Info : durationMillis|connection|mongod",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "text": "Error",   "value": "\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"", "selected": false },
+              { "text": "Warning", "value": "\\\"s\\\":\\\"W\\\"",                     "selected": false },
+              { "text": "Info",    "value": "durationMillis|connection|mongod",        "selected": false }
+            ],
+            "skipUrlSync": false
+          },
+          {
+            "name": "nivel_rabbitmq",
+            "label": "RabbitMQ - Nivel",
+            "type": "custom",
+            "hide": 0,
+            "refresh": 0,
+            "includeAll": true,
+            "allValue": "error|warning|info",
+            "multi": false,
+            "query": "Error : error,Warning : warning,Info : info",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "text": "Error",   "value": "error",   "selected": false },
+              { "text": "Warning", "value": "warning", "selected": false },
+              { "text": "Info",    "value": "info",    "selected": false }
+            ],
+            "skipUrlSync": false
+          },
+          {
+            "name": "nivel_emqx",
+            "label": "EMQX - Nivel",
+            "type": "custom",
+            "hide": 0,
+            "refresh": 0,
+            "includeAll": true,
+            "allValue": "level=error|level=warning|level=info",
+            "multi": false,
+            "query": "Error : level=error,Warning : level=warning,Info : level=info",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "text": "Error",   "value": "level=error",   "selected": false },
+              { "text": "Warning", "value": "level=warning", "selected": false },
+              { "text": "Info",    "value": "level=info",    "selected": false }
+            ],
+            "skipUrlSync": false
+          },
+          {
+            "name": "nivel_influxdb",
+            "label": "InfluxDB - Nivel",
+            "type": "custom",
+            "hide": 0,
+            "refresh": 0,
+            "includeAll": true,
+            "allValue": "level=error|level=warn|level=info",
+            "multi": false,
+            "query": "Error : level=error,Warning : level=warn,Info : level=info",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "text": "Error",   "value": "level=error", "selected": false },
+              { "text": "Warning", "value": "level=warn",  "selected": false },
+              { "text": "Info",    "value": "level=info",  "selected": false }
+            ],
+            "skipUrlSync": false
+          },
+          {
+            "name": "nivel_minio",
+            "label": "MinIO - Nivel",
+            "type": "custom",
+            "hide": 0,
+            "refresh": 0,
+            "includeAll": true,
+            "allValue": "ERROR|WARN|INFO",
+            "multi": false,
+            "query": "Error : ERROR,Warning : WARN,Info : INFO",
+            "current": { "text": "All", "value": "$__all" },
+            "options": [
+              { "text": "Error",   "value": "ERROR", "selected": false },
+              { "text": "Warning", "value": "WARN",  "selected": false },
+              { "text": "Info",    "value": "INFO",  "selected": false }
+            ],
+            "skipUrlSync": false
           }
         ]
       },
