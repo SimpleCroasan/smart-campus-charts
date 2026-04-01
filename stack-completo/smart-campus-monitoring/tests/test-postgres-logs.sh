@@ -9,7 +9,9 @@ kubectl exec $POD -n $NS -- psql -U $USER -d $DB -c "SELECT * FROM tabla_que_no_
 kubectl exec $POD -n $NS -- psql -U $USER -d $DB -c "SELECT 1/0;" 2>&1 || true
 
 echo "=== Test WARNING ==="
-kubectl exec $POD -n $NS -- psql -U $USER -d $DB -c "DROP TABLE IF EXISTS tabla_fantasma;" 2>&1
+kubectl exec postgres-0 -n smart-campus -- psql -U postgres -d iot -c "
+DO \$\$ BEGIN RAISE WARNING 'Test de warning para dashboard'; END \$\$;
+"
 
 echo "=== Test LOG (checkpoint) ==="
 kubectl exec $POD -n $NS -- psql -U $USER -d $DB -c "CHECKPOINT;" 2>&1
