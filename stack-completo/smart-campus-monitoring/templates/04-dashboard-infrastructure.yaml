@@ -62,7 +62,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]| ERROR:| PANIC:|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [$__range]))",
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]|ERROR:|PANIC:|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [$__range]))",
               "legendFormat": "",
               "refId": "A",
               "instant": true
@@ -109,7 +109,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"postgres\"} |~ \"${nivel_postgres:raw}\"",
+              "expr": "{namespace=\"smart-campus\", app=\"postgres\"} !~ \"host=\\\\[local\\\\]|pg_isready\" |~ \"${nivel_postgres:raw}\"",
               "refId": "A"
             }
           ],
