@@ -130,7 +130,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"mongodb\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|\\\"s\\\":\\\"W\\\"|durationMillis|connection accepted|connection ended|mongod startup complete|mongod shutdown complete|Received signal)\" |~ \"${nivel_mongodb}\"",
+              "expr": "{namespace=\"smart-campus\", app=\"mongodb\"} |~ \"${nivel_mongodb:raw}\"",
               "refId": "A"
             }
           ],
@@ -223,7 +223,7 @@ data:
           }
         }
       ],
-      "refresh": "30s",
+      "refresh": "1m",
       "schemaVersion": 39,
       "tags": ["smart-campus", "loki", "infrastructure"],
       "templating": {
@@ -264,14 +264,16 @@ data:
             "hide": 0,
             "refresh": 0,
             "includeAll": true,
-            "allValue": "\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|\\\"s\\\":\\\"W\\\"|durationMillis|connection|mongod",
+            "allValue": "\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|\\\"s\\\":\\\"W\\\"|durationMillis|Connection accepted|Connection ended|mongod startup complete|mongod shutdown complete|Received signal",
             "multi": false,
-            "query": "Error : \\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\",Warning : \\\"s\\\":\\\"W\\\",Info : durationMillis|connection|mongod",
+            "query": "Error : \\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\",Warning : \\\"s\\\":\\\"W\\\",Queries lentas : durationMillis,Conexiones : Connection accepted|Connection ended,Info : mongod startup complete|mongod shutdown complete|Received signal",
             "current": { "text": "All", "value": "$__all" },
             "options": [
-              { "text": "Error",   "value": "\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"", "selected": false },
-              { "text": "Warning", "value": "\\\"s\\\":\\\"W\\\"",                     "selected": false },
-              { "text": "Info",    "value": "durationMillis|connection|mongod",        "selected": false }
+              { "text": "Error",          "value": "\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"",        "selected": false },
+              { "text": "Warning",        "value": "\\\"s\\\":\\\"W\\\"",                            "selected": false },
+              { "text": "Queries lentas", "value": "durationMillis",                                 "selected": false },
+              { "text": "Conexiones",     "value": "Connection accepted|Connection ended",            "selected": false },
+              { "text": "Info",           "value": "mongod startup complete|mongod shutdown complete|Received signal", "selected": false }
             ],
             "skipUrlSync": false
           },
