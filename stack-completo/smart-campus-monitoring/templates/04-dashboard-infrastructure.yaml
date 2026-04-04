@@ -150,7 +150,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"rabbitmq\"} |~ \"${nivel_rabbitmq}\"",
+              "expr": "{namespace=\"smart-campus\", app=\"rabbitmq\"} |~ \"${nivel_rabbitmq:raw}\"",
               "refId": "A"
             }
           ],
@@ -170,7 +170,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"emqx\"} |~ \"${nivel_emqx}\"",
+              "expr": "{namespace=\"smart-campus\", app=\"emqx\"} |~ \"${nivel_emqx:raw}\"",
               "refId": "A"
             }
           ],
@@ -190,7 +190,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"influxdb\"} |~ \"${nivel_influxdb}\"",
+              "expr": "{namespace=\"smart-campus\", app=\"influxdb\"} |~ \"${nivel_influxdb:raw}\"",
               "refId": "A"
             }
           ],
@@ -210,7 +210,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=\"minio\"} !~ \"(health|ready|liveness|readiness)\" |~ \"${nivel_minio}\"",
+              "expr": "{namespace=\"smart-campus\", app=\"minio\"} !~ \"(health|ready|liveness|readiness)\" |~ \"${nivel_minio:raw}\"",
               "refId": "A"
             }
           ],
