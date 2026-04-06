@@ -56,12 +56,13 @@ data:
           "title": "Errores en admin",
           "description": "Errores en el rango seleccionado",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 7 },
+          "gridPos": { "h": 4, "w": 8, "x": 0, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\", app=\"admin\"} |= \"ERROR\" [$__range])",
-              "refId": "A"
+              "expr": "sum(count_over_time({namespace=\"smart-campus\", app=\"admin\"} |= \"ERROR\" [$__range]))",
+              "refId": "A",
+              "instant": true
             }
           ],
           "fieldConfig": {
@@ -76,19 +77,20 @@ data:
               }
             }
           },
-          "options": { "colorMode": "background", "graphMode": "area" }
+          "options": { "colorMode": "background", "graphMode": "none" }
         },
         {
           "id": 3,
           "title": "Errores en data",
           "description": "Errores en el rango seleccionado",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 7 },
+          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\", app=\"data\"} |= \"ERROR\" [$__range])",
-              "refId": "A"
+              "expr": "sum(count_over_time({namespace=\"smart-campus\", app=\"data\"} |= \"ERROR\" [$__range]))",
+              "refId": "A",
+              "instant": true
             }
           ],
           "fieldConfig": {
@@ -103,19 +105,20 @@ data:
               }
             }
           },
-          "options": { "colorMode": "background", "graphMode": "area" }
+          "options": { "colorMode": "background", "graphMode": "none" }
         },
         {
           "id": 4,
           "title": "Conexiones fallidas a bases de datos",
           "description": "En el rango seleccionado",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 7 },
+          "gridPos": { "h": 4, "w": 8, "x": 16, "y": 7 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(connection refused|connection reset|timeout|unable to connect)\" [$__range])",
-              "refId": "A"
+              "expr": "sum(count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(connection refused|connection reset|timeout|unable to connect)\" [$__range]))",
+              "refId": "A",
+              "instant": true
             }
           ],
           "fieldConfig": {
@@ -130,34 +133,7 @@ data:
               }
             }
           },
-          "options": { "colorMode": "background", "graphMode": "area" }
-        },
-        {
-          "id": 5,
-          "title": "Reinicios detectados",
-          "description": "Logs que indican inicio de aplicación en el rango seleccionado",
-          "type": "stat",
-          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 7 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
-          "targets": [
-            {
-              "expr": "count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(started|starting|initialized|bootstrap)\" [$__range])",
-              "refId": "A"
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "thresholds" },
-              "thresholds": {
-                "steps": [
-                  { "color": "blue", "value": null },
-                  { "color": "yellow", "value": 3 },
-                  { "color": "red", "value": 10 }
-                ]
-              }
-            }
-          },
-          "options": { "colorMode": "background", "graphMode": "area" }
+          "options": { "colorMode": "background", "graphMode": "none" }
         },
         {
           "id": 6,

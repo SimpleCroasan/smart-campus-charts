@@ -75,9 +75,10 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\".+\"} |= \"ERROR\" [$__range]))",
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\".+\"} |= \"ERROR\" !~ \"monitoring-alloy-otlp|okhttp3|java\\\\.base\" [$__range]))",
               "legendFormat": "{{ "{{" }}app{{ "}}" }}",
-              "refId": "A"
+              "refId": "A",
+              "instant": true
             }
           ],
           "fieldConfig": {
@@ -127,9 +128,10 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\"} [$__range])",
+              "expr": "sum(count_over_time({namespace=\"smart-campus\"} !~ \"host=\\\\[local\\\\]|pg_isready|Connection accepted|Connection ended|monitoring-alloy-otlp|okhttp3\" [$__range]))",
               "legendFormat": "Total logs",
-              "refId": "A"
+              "refId": "A",
+              "instant": true
             }
           ],
           "fieldConfig": {
@@ -148,7 +150,7 @@ data:
           },
           "options": {
             "colorMode": "background",
-            "graphMode": "area",
+            "graphMode": "none",
             "justifyMode": "center",
             "orientation": "horizontal",
             "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
@@ -164,9 +166,10 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "count_over_time({namespace=\"smart-campus\"} |= \"ERROR\" [$__range])",
+              "expr": "sum(count_over_time({namespace=\"smart-campus\"} |= \"ERROR\" !~ \"monitoring-alloy-otlp|okhttp3|java\\\\.base\" [$__range]))",
               "legendFormat": "Errores",
-              "refId": "A"
+              "refId": "A",
+              "instant": true
             }
           ],
           "fieldConfig": {
@@ -185,7 +188,7 @@ data:
           },
           "options": {
             "colorMode": "background",
-            "graphMode": "area",
+            "graphMode": "none",
             "justifyMode": "center",
             "orientation": "horizontal",
             "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
@@ -210,9 +213,11 @@ data:
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
-                "drawStyle": "bars",
-                "fillOpacity": 80,
-                "stacking": { "group": "A", "mode": "normal" }
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "stacking": { "group": "A", "mode": "none" }
               },
               "unit": "short"
             }
@@ -230,7 +235,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\"} |~ \"(?i)(error|warn|exception|failed|failure)\"",
+              "expr": "{namespace=\"smart-campus\"} |~ \"(?i)(error|warn|exception|failed|failure)\" !~ \"monitoring-alloy-otlp|okhttp3|pg_isready|Connection accepted|Connection ended\"",
               "refId": "A"
             }
           ],
