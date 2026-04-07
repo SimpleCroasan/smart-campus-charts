@@ -97,14 +97,16 @@ spec:
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "service.namespace=smart-campus,deployment.environment=thesis"
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /actuator/health
               port: 8081
             initialDelaySeconds: 60
             periodSeconds: 20
             timeoutSeconds: 10
             failureThreshold: 5
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /actuator/health
               port: 8081
             initialDelaySeconds: 40
             periodSeconds: 15

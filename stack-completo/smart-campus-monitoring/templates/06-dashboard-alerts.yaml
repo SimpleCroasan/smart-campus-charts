@@ -26,10 +26,10 @@ data:
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
-              "expr": "max by (app) (up{app=~\"admin|data\"})",
+              "expr": "min by (app) (up{app=~\"admin|data\"} or label_replace(clamp_max(absent(up{app=\"admin\"}), 0), \"app\", \"admin\", \"\", \"\") or label_replace(clamp_max(absent(up{app=\"data\"}), 0), \"app\", \"data\", \"\", \"\"))",
               "legendFormat": "{{ "{{" }}app{{ "}}" }}",
-              "instant": false,
-              "range": true
+              "instant": true,
+              "range": false
             }
           ],
           "fieldConfig": {
@@ -212,6 +212,6 @@ data:
       "time": { "from": "now-1h", "to": "now" },
       "title": "Smart Campus - Alertas y rendimiento",
       "uid": "smart-campus-alerts",
-      "version": 8
+      "version": 10
     }
 {{- end }}
