@@ -55,3 +55,10 @@ spec:
       services:
         - name: data
           port: 8082
+    # ─── Frontend admin ───────────────────────────────────────────────────────
+    # Ruta catch-all — debe ir al final para no interceptar /admin ni /data.
+    - match: PathPrefix(`/`)
+      kind: Rule
+      services:
+        - name: frontend-admin
+          port: 80

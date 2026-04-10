@@ -61,3 +61,9 @@ adminService:
   image: semillerocage/admin-service
   tag: "1.2"
   imageSource: remote
+
+frontendAdmin:
+  enabled: true
+  image: semillerocage/front-end-admin
+  tag: "1.0"
+  imageSource: remote

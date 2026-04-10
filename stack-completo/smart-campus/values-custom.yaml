@@ -24,6 +24,9 @@ dataService:
 
 adminService:
   enabled: true
+
+frontendAdmin:
+  enabled: true
 # ── Imágenes ──────────────────────────────────────────────────────
 # imageSource: local  — usa la imagen del containerd del nodo (imagePullPolicy: Never)
 # imageSource: remote — descarga desde DockerHub              (imagePullPolicy: IfNotPresent)
@@ -35,4 +38,9 @@ dataService:
 adminService:
   imageSource: local
   image: admin-service
+  tag: latest
+
+frontendAdmin:
+  imageSource: local
+  image: frontend-admin
   tag: latest
