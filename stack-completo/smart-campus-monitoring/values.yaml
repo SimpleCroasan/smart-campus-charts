@@ -466,14 +466,12 @@ prometheus:
   namespaceOverride: monitoring
   server:
     extraArgs:
-      web.enable-remote-write-receiver: null
       # Habilitar almacenamiento de exemplars para correlación
       # de métricas con trazas (punto en gráfica → traza en Tempo).
       enable-feature: exemplar-storage
     extraFlags:
       - "web.enable-remote-write-receiver"
     global:
-      # Máximo de exemplars almacenados en memoria
       external_labels:
         cluster: smart-campus-k3s
     retention: "15d"
