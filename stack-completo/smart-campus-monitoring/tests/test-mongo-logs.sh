@@ -1,31 +1,36 @@
 #!/bin/bash
 # ============================================================
-# test-mongo-dashboard.sh
-# Tests para el panel MongoDB del dashboard de Infraestructura
+# test-mongo-logs.sh — panel "MongoDB - Logs relevantes"
+# Filtros (nivel_mongodb): Error="s":"E"|"s":"F"  Warning="s":"W"
+#   Queries lentas=durationMillis  Conexiones=Connection accepted/ended
+#   Info=startup/shutdown
+# HALLAZGO: MongoDB loguea los errores de operacion de cliente como
+#   "s":"D1" (Debug), no como "s":"E". El filtro Error captura errores
+#   internos del servidor (corrupcion, disco), raros pero criticos.
+#   Un filtro Error vacio en operacion normal = servidor sano.
 # ============================================================
-
+if command -v kubectl >/dev/null 2>&1; then KUBECTL="kubectl"; else KUBECTL="k3s kubectl"; fi
 NS="smart-campus"
 POD="mongodb-0"
 AUTH="-u root -p password --authenticationDatabase admin"
 
 echo "=== Test 1: ERROR (\"s\":\"E\") ==="
-kubectl exec $POD -n $NS -- mongosh --host localhost --port 27017 \
+$KUBECTL exec $POD -n $NS -- mongosh --host localhost --port 27017 \
   -u "fake_user" -p "fake_pass" --authenticationDatabase admin \
   --eval "db.runCommand({ping:1})" 2>&1 || true
-
-kubectl exec $POD -n $NS -- mongosh $AUTH --eval '
+$KUBECTL exec $POD -n $NS -- mongosh $AUTH --eval '
   try { db.adminCommand({invalidCommand: 1}); } catch(e) { print("Error: " + e.message); }
 ' 2>&1 || true
 
 echo ""
 echo "=== Test 2: WARNING (\"s\":\"W\") ==="
-kubectl exec $POD -n $NS -- mongosh $AUTH --eval '
+$KUBECTL exec $POD -n $NS -- mongosh $AUTH --eval '
   try { db.getSiblingDB("admin").auth("intruso", "clave_mal"); } catch(e) {}
 ' 2>&1 || true
 
 echo ""
 echo "=== Test 3: QUERIES LENTAS (durationMillis) ==="
-kubectl exec $POD -n $NS -- mongosh $AUTH iot --eval '
+$KUBECTL exec $POD -n $NS -- mongosh $AUTH iot --eval '
   db.setProfilingLevel(1, {slowms: 100});
   var bulk = [];
   for (var i = 0; i < 100000; i++) {
@@ -39,23 +44,22 @@ kubectl exec $POD -n $NS -- mongosh $AUTH iot --eval '
   ]).toArray();
   db.test_slow.drop();
   db.setProfilingLevel(0);
-' 2>&1
+' 2>&1 || true
 
 echo ""
 echo "=== Test 4: CONEXIONES (connection accepted/ended) ==="
-kubectl exec $POD -n $NS -- mongosh $AUTH iot --eval "db.runCommand({ping:1})" 2>&1
+$KUBECTL exec $POD -n $NS -- mongosh $AUTH iot --eval "db.runCommand({ping:1})" 2>&1 || true
 
 echo ""
 echo "=== Test 5: INFO (startup/shutdown) ==="
 echo "Reiniciando pod mongodb-0 (el StatefulSet lo recrea automaticamente)..."
-kubectl delete pod $POD -n $NS
-echo "Esperando a que el pod vuelva a estar Ready..."
-kubectl wait --for=condition=Ready pod/$POD -n $NS --timeout=120s
+$KUBECTL delete pod $POD -n $NS --ignore-not-found
+echo "Esperando a que el StatefulSet recree el pod..."
+sleep 5
+$KUBECTL wait --for=condition=Ready pod/$POD -n $NS --timeout=120s
 
 echo ""
-echo "=== Tests completados. Verifica en Grafana en ~60s ==="
-echo ""
-echo "NOTA: Si el filtro Error no muestra resultados, es esperado."
-echo "MongoDB loguea errores de operacion como \"s\":\"D1\" (Debug),"
-echo "no como \"s\":\"E\". El filtro Error captura errores internos"
-echo "del servidor (corrupcion, disco lleno), que son raros pero criticos."
+echo "=== Tests completados. Verifica en Grafana (rango: ultima 1 hora) ==="
+echo "NOTA: si el filtro Error no muestra resultados, es esperado."
+echo "MongoDB loguea errores de operacion como \"s\":\"D1\" (Debug), no \"s\":\"E\"."
+echo "El filtro Error captura errores internos del servidor (raros pero criticos)."
