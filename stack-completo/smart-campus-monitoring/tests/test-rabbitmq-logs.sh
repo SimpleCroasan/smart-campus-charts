@@ -2,32 +2,35 @@
 # ============================================================
 # test-rabbitmq-logs.sh — panel "RabbitMQ - Logs"
 # Filtros (nivel_rabbitmq): Error=error  Warning=warning  Info=info
-# RabbitMQ escribe [error]/[warning]/[info]; el panel filtra con |~
+# Estrategia: PROVOCAR eventos reales del broker (sin lineas sinteticas).
+# HALLAZGOS:
+#  - El rechazo de login solo se registra ante conexion AMQP real (5672).
+#  - La alarma de memoria debe CRUZARSE para emitir [warning]; cambiar
+#    solo el umbral se registra como [info].
+#  Requiere internet del cluster (imagen python:3.12-slim).
 # ============================================================
+if command -v kubectl >/dev/null 2>&1; then KUBECTL="kubectl"; else KUBECTL="k3s kubectl"; fi
 NS="smart-campus"
 POD="rabbitmq-0"
 
-echo "=== Test 1: ERROR/WARNING (autenticacion rechazada) ==="
-# Login fallido -> RabbitMQ registra el rechazo (PLAIN login refused)
-kubectl exec $POD -n $NS -- rabbitmqctl authenticate_user usuario_falso clave_mala 2>&1 || true
+echo "=== Test 1: ERROR real (login AMQP rechazado) ==="
+$KUBECTL run amqp-bad --rm -i --restart=Never -n $NS --image=python:3.12-slim -- \
+  sh -c "pip install -q pika 2>/dev/null; python -c \"import pika; pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq', credentials=pika.PlainCredentials('admin','clave_incorrecta')))\"" 2>&1 || true
 
 echo ""
-echo "=== Test 2: WARNING (alarma de memoria) ==="
-# NOTA: el watermark bajo dispara [warning] real, pero aplica back-pressure
-# a los publicadores ~2s hasta que se restaura. Se auto-resuelve. Si prefieres
-# cero efecto sobre el microservicio data, comenta este bloque: la linea
-# logger:warning de abajo ya cubre el nivel.
-kubectl exec $POD -n $NS -- rabbitmqctl set_vm_memory_high_watermark 0.01 2>&1 || true
+echo "=== Test 2: WARNING real (alarma de memoria disparada) ==="
+# Umbral absoluto por debajo del uso actual -> [warning] alarm set.
+# Aplica back-pressure a publicadores hasta restaurar (~8s).
+$KUBECTL exec $POD -n $NS -- rabbitmqctl set_vm_memory_high_watermark absolute "50MB" 2>&1 || true
+echo "Esperando a que el monitor de memoria dispare la alarma..."
+sleep 8
+$KUBECTL exec $POD -n $NS -- rabbitmqctl set_vm_memory_high_watermark 0.4 2>&1 || true
+
+echo ""
+echo "=== Verificacion en el log del broker ==="
 sleep 2
-kubectl exec $POD -n $NS -- rabbitmqctl set_vm_memory_high_watermark 0.4 2>&1 || true
+$KUBECTL logs $POD -n $NS --tail=60 | grep -iE "refused|resource limit alarm" || echo "(sin coincidencias)"
 
 echo ""
-echo "=== Cobertura garantizada de nivel (logger directo) ==="
-kubectl exec $POD -n $NS -- rabbitmqctl eval 'logger:error("Test ERROR para dashboard").' 2>&1 || true
-kubectl exec $POD -n $NS -- rabbitmqctl eval 'logger:warning("Test WARNING para dashboard").' 2>&1 || true
-kubectl exec $POD -n $NS -- rabbitmqctl eval 'logger:info("Test INFO para dashboard").' 2>&1 || true
-
-echo ""
-echo "=== Listo. Verifica en Grafana en ~30s ==="
-echo "NOTA: las conexiones (nivel info) las genera el microservicio data al"
-echo "conectarse al broker AMQP, sin accion manual."
+echo "=== Listo. Verifica en Grafana (rango: ultima 1 hora) ==="
+echo "INFO: las conexiones del microservicio data cubren el nivel info de forma natural."

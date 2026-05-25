@@ -62,7 +62,7 @@ data:
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]|ERROR:|PANIC:|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [$__range]))",
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\"postgres|mongodb|influxdb|rabbitmq|emqx|minio\"} |~ \"(\\\"s\\\":\\\"E\\\"|\\\"s\\\":\\\"F\\\"|Assertion while executing command|\\\\[error\\\\]|\\\\[ERROR\\\\]|ERROR:|PANIC:|FATAL|lvl=error|level=error|\\\"level\\\":\\\"ERROR\\\"|\\\"level\\\":\\\"error\\\")\" !~ \"(atlasVersion|getParameter)\" [$__range]))",
               "legendFormat": "",
               "refId": "A",
               "instant": true
@@ -302,14 +302,14 @@ data:
             "hide": 0,
             "refresh": 0,
             "includeAll": true,
-            "allValue": "level=error|level=warning|level=info",
+            "allValue": "error|warning|info",
             "multi": false,
-            "query": "Error : level=error,Warning : level=warning,Info : level=info",
+            "query": "Error : error,Warning : warning,Info : info",
             "current": { "text": "All", "value": "$__all" },
             "options": [
-              { "text": "Error",   "value": "level=error",   "selected": false },
-              { "text": "Warning", "value": "level=warning", "selected": false },
-              { "text": "Info",    "value": "level=info",    "selected": false }
+              { "text": "Error",   "value": "error",   "selected": false },
+              { "text": "Warning", "value": "warning", "selected": false },
+              { "text": "Info",    "value": "info",    "selected": false }
             ],
             "skipUrlSync": false
           },
@@ -320,14 +320,14 @@ data:
             "hide": 0,
             "refresh": 0,
             "includeAll": true,
-            "allValue": "level=error|level=warn|level=info",
+            "allValue": "lvl=error|lvl=warn|lvl=info",
             "multi": false,
-            "query": "Error : level=error,Warning : level=warn,Info : level=info",
+            "query": "Error : lvl=error,Warning : lvl=warn,Info : lvl=info",
             "current": { "text": "All", "value": "$__all" },
             "options": [
-              { "text": "Error",   "value": "level=error", "selected": false },
-              { "text": "Warning", "value": "level=warn",  "selected": false },
-              { "text": "Info",    "value": "level=info",  "selected": false }
+              { "text": "Error",   "value": "lvl=error", "selected": false },
+              { "text": "Warning", "value": "lvl=warn",  "selected": false },
+              { "text": "Info",    "value": "lvl=info",    "selected": false }
             ],
             "skipUrlSync": false
           },
@@ -338,12 +338,12 @@ data:
             "hide": 0,
             "refresh": 0,
             "includeAll": true,
-            "allValue": "ERROR|WARN|INFO",
+            "allValue": "ERROR|FATAL|PANIC|WARN|INFO",
             "multi": false,
-            "query": "Error : ERROR,Warning : WARN,Info : INFO",
+            "query": "Error : ERROR|FATAL|PANIC,Warning : WARN,Info : INFO",
             "current": { "text": "All", "value": "$__all" },
             "options": [
-              { "text": "Error",   "value": "ERROR", "selected": false },
+              { "text": "Error",   "value": "ERROR|FATAL|PANIC", "selected": false },
               { "text": "Warning", "value": "WARN",  "selected": false },
               { "text": "Info",    "value": "INFO",  "selected": false }
             ],
