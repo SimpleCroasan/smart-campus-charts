@@ -11,10 +11,8 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
-
 server:
   port: ${ADMIN_SERVICE_PORT:8081}
-
 management:
   endpoints:
     web:
@@ -23,7 +21,15 @@ management:
   metrics:
     tags:
       application: admin
-
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+  prometheus:
+    metrics:
+      export:
+        descriptions: true
 logging:
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id:-},%X{span_id:-}]"
