@@ -1,46 +1,35 @@
 # ── Perfil personalizado ──────────────────────────────────────────
 # Cambia true/false según lo que necesites levantar
-
 postgres:
   enabled: true
-
 mongo:
   enabled: true
-
 influxdb:
   enabled: true
-
 minio:
   enabled: true
-
 rabbitmq:
   enabled: true
-
 emqx:
   enabled: true
 
-dataService:
-  enabled: true
-
-adminService:
-  enabled: true
-
-frontendAdmin:
-  enabled: true
-# ── Imágenes ──────────────────────────────────────────────────────
+# ── Microservicios e imágenes ─────────────────────────────────────
 # imageSource: local  — usa la imagen del containerd del nodo (imagePullPolicy: Never)
 # imageSource: remote — descarga desde DockerHub              (imagePullPolicy: IfNotPresent)
 dataService:
-  imageSource: local
-  image: data-service
-  tag: latest
+  enabled: true
+  imageSource: remote
+  image: semillerocage/data-service
+  tag: "1.4"
 
 adminService:
-  imageSource: local
-  image: admin-service
-  tag: latest
+  enabled: true
+  imageSource: remote
+  image: semillerocage/admin-service
+  tag: "1.3"
 
 frontendAdmin:
+  enabled: true
   imageSource: local
   image: frontend-admin
   tag: latest

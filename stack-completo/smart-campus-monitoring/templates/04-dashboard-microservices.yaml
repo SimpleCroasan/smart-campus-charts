@@ -10,7 +10,7 @@ data:
   smart-campus-microservices.json: |
     {
       "annotations": { "list": [] },
-      "description": "Monitoreo de microservicios Smart Campus - admin y data",
+      "description": "Monitoreo de microservicios Smart Campus - admin y data (metodo RED: Rate, Errors, Duration)",
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 1,
@@ -18,20 +18,15 @@ data:
       "panels": [
         {
           "id": 1,
-          "title": "Comparación de actividad: admin vs data",
+          "title": "Tasa de peticiones HTTP (req/s) por servicio",
           "type": "timeseries",
-          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
-              "expr": "sum(rate({namespace=\"smart-campus\", app=\"admin\"} [$__interval]))",
-              "legendFormat": "admin",
+              "expr": "sum by (app) (rate(http_server_requests_seconds_count{app=~\"admin|data\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
               "refId": "A"
-            },
-            {
-              "expr": "sum(rate({namespace=\"smart-campus\", app=\"data\"} [$__interval]))",
-              "legendFormat": "data",
-              "refId": "B"
             }
           ],
           "fieldConfig": {
@@ -44,51 +39,60 @@ data:
                 "lineWidth": 2,
                 "showPoints": "never"
               },
-              "unit": "short"
+              "unit": "reqps"
             }
           },
           "options": {
-            "legend": { "calcs": ["mean", "max", "sum"], "displayMode": "table", "placement": "right" }
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" }
           }
         },
         {
           "id": 2,
-          "title": "Errores en admin",
-          "description": "Errores en el rango seleccionado",
-          "type": "stat",
-          "gridPos": { "h": 4, "w": 8, "x": 0, "y": 7 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "title": "Tasa de errores 5xx (req/s) por servicio",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
-              "expr": "sum(count_over_time({namespace=\"smart-campus\", app=\"admin\"} |= \"ERROR\" [$__range]))",
-              "refId": "A",
-              "instant": true
+              "expr": "sum by (app) (rate(http_server_requests_seconds_count{app=~\"admin|data\", status=~\"5..\"}[$__rate_interval]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }}",
+              "refId": "A"
             }
           ],
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 30,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "always"
+              },
               "thresholds": {
+                "mode": "absolute",
                 "steps": [
                   { "color": "green", "value": null },
-                  { "color": "yellow", "value": 5 },
-                  { "color": "red", "value": 20 }
+                  { "color": "orange", "value": 0.1 },
+                  { "color": "red", "value": 1 }
                 ]
-              }
+              },
+              "unit": "reqps"
             }
           },
-          "options": { "colorMode": "background", "graphMode": "none" }
+          "options": {
+            "legend": { "calcs": ["max", "sum"], "displayMode": "table", "placement": "right" }
+          }
         },
         {
           "id": 3,
-          "title": "Errores en data",
-          "description": "Errores en el rango seleccionado",
+          "title": "Total errores 5xx (admin)",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 7 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
-              "expr": "sum(count_over_time({namespace=\"smart-campus\", app=\"data\"} |= \"ERROR\" [$__range]))",
+              "expr": "sum(increase(http_server_requests_seconds_count{app=\"admin\", status=~\"5..\"}[$__range])) or vector(0)",
               "refId": "A",
               "instant": true
             }
@@ -97,26 +101,28 @@ data:
             "defaults": {
               "color": { "mode": "thresholds" },
               "thresholds": {
+                "mode": "absolute",
                 "steps": [
                   { "color": "green", "value": null },
-                  { "color": "yellow", "value": 5 },
-                  { "color": "red", "value": 20 }
+                  { "color": "yellow", "value": 1 },
+                  { "color": "red", "value": 10 }
                 ]
-              }
+              },
+              "unit": "short",
+              "decimals": 0
             }
           },
-          "options": { "colorMode": "background", "graphMode": "none" }
+          "options": { "colorMode": "background", "graphMode": "area", "textMode": "value_and_name" }
         },
         {
           "id": 4,
-          "title": "Conexiones fallidas a bases de datos",
-          "description": "En el rango seleccionado",
+          "title": "Total errores 5xx (data)",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 8, "x": 16, "y": 7 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
-              "expr": "sum(count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(connection refused|connection reset|timeout|unable to connect)\" [$__range]))",
+              "expr": "sum(increase(http_server_requests_seconds_count{app=\"data\", status=~\"5..\"}[$__range])) or vector(0)",
               "refId": "A",
               "instant": true
             }
@@ -125,22 +131,160 @@ data:
             "defaults": {
               "color": { "mode": "thresholds" },
               "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1 },
+                  { "color": "red", "value": 10 }
+                ]
+              },
+              "unit": "short",
+              "decimals": 0
+            }
+          },
+          "options": { "colorMode": "background", "graphMode": "area", "textMode": "value_and_name" }
+        },
+        {
+          "id": 5,
+          "title": "Total errores 4xx (cliente)",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum(increase(http_server_requests_seconds_count{app=~\"admin|data\", status=~\"4..\"}[$__range])) or vector(0)",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 5 },
+                  { "color": "orange", "value": 20 }
+                ]
+              },
+              "unit": "short",
+              "decimals": 0
+            }
+          },
+          "options": { "colorMode": "background", "graphMode": "area", "textMode": "value_and_name" }
+        },
+        {
+          "id": 6,
+          "title": "Conexiones fallidas a backends (logs)",
+          "description": "Coincidencias literales en logs del namespace",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(connection refused|connection reset|unable to connect|broken pipe)\" [$__range]))",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
                 "steps": [
                   { "color": "green", "value": null },
                   { "color": "orange", "value": 1 },
                   { "color": "red", "value": 5 }
                 ]
-              }
+              },
+              "unit": "short",
+              "decimals": 0
             }
           },
-          "options": { "colorMode": "background", "graphMode": "none" }
+          "options": { "colorMode": "background", "graphMode": "none", "textMode": "value_and_name" }
         },
         {
-          "id": 6,
+          "id": 7,
+          "title": "Latencia P95 por endpoint (segundos)",
+          "description": "Percentil 95 de duracion de peticiones HTTP por app y URI",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (app, uri, le) (rate(http_server_requests_seconds_bucket{app=~\"admin|data\", uri!~\"/actuator.*\"}[$__rate_interval])))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }} {{ "{{" }}uri{{ "}}" }}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "showPoints": "never"
+              },
+              "unit": "s"
+            }
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" }
+          }
+        },
+        {
+          "id": 8,
+          "title": "Top endpoints con mas errores 5xx",
+          "description": "URIs con mayor tasa de errores 5xx en el rango",
+          "type": "barchart",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "topk(5, sum by (app, uri) (increase(http_server_requests_seconds_count{app=~\"admin|data\", status=~\"5..\"}[$__range])))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }} {{ "{{" }}uri{{ "}}" }}",
+              "refId": "A",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "labelsToFields",
+              "options": { "mode": "columns" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "orange", "value": 1 },
+                  { "color": "red", "value": 5 }
+                ]
+              },
+              "unit": "short",
+              "decimals": 0
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "showValue": "always",
+            "barWidth": 0.7,
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }
+          }
+        },
+        {
+          "id": 9,
           "title": "Logs de admin",
           "type": "logs",
-          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 11 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 20 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             {
               "expr": "{namespace=\"smart-campus\", app=\"admin\"}",
@@ -157,11 +301,11 @@ data:
           }
         },
         {
-          "id": 7,
+          "id": 10,
           "title": "Logs de data",
           "type": "logs",
-          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 11 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 20 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             {
               "expr": "{namespace=\"smart-campus\", app=\"data\"}",
@@ -178,22 +322,23 @@ data:
           }
         },
         {
-          "id": 8,
+          "id": 11,
           "title": "Excepciones Java / Stack Traces",
-          "description": "Errores con stack trace de los microservicios Spring Boot",
+          "description": "Lineas con excepcion o caused by; util para diagnostico cruzado con trazas",
           "type": "logs",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 21 },
-          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 30 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             {
-              "expr": "{namespace=\"smart-campus\", app=~\"admin|data\"} |~ \"(?i)(exception|caused by|at [a-z]+\\\\.[a-z]+)\"",
+              "expr": "{namespace=\"smart-campus\", app=~\"admin|data\"} |~ \"(?i)(exception|caused by)\"",
               "refId": "A"
             }
           ],
           "options": {
             "dedupStrategy": "none",
             "enableLogDetails": true,
-            "showLabels": true,
+            "showLabels": false,
+            "showCommonLabels": true,
             "showTime": true,
             "sortOrder": "Descending",
             "wrapLogMessage": true
@@ -202,14 +347,23 @@ data:
       ],
       "refresh": "30s",
       "schemaVersion": 39,
-      "tags": ["smart-campus", "loki", "microservices"],
+      "tags": ["smart-campus", "microservices", "RED"],
       "templating": {
         "list": [
           {
+            "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" },
+            "hide": 0,
+            "label": "Prometheus",
+            "name": "prometheus",
+            "query": "prometheus",
+            "refresh": 1,
+            "type": "datasource"
+          },
+          {
             "current": { "selected": false, "text": "Loki", "value": "Loki" },
             "hide": 0,
-            "label": "Datasource",
-            "name": "datasource",
+            "label": "Loki",
+            "name": "loki",
             "query": "loki",
             "refresh": 1,
             "type": "datasource"
@@ -219,6 +373,6 @@ data:
       "time": { "from": "now-1h", "to": "now" },
       "title": "Smart Campus - Microservicios",
       "uid": "smart-campus-microservices",
-      "version": 1
+      "version": 2
     }
 {{- end }}
