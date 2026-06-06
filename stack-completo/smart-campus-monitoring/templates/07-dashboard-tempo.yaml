@@ -10,7 +10,7 @@ data:
   smart-campus-tempo.json: |
     {
       "annotations": { "list": [] },
-      "description": "Trazas distribuidas y latencia de microservicios Smart Campus",
+      "description": "Trazas distribuidas, latencia y correlacion cross-signal (Capa 3) de microservicios Smart Campus",
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 1,
@@ -166,16 +166,86 @@ data:
             "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["last", "max"] },
             "tooltip": { "mode": "multi", "sort": "desc" }
           }
+        },
+
+        {
+          "id": 6,
+          "title": "Tasa de peticiones con exemplars (Capa 3)",
+          "description": "Cada punto con circulo es un exemplar clicable que abre la traza concreta del request en Tempo. Demuestra el salto metrica → traza.",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 25 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (app, status) (rate(http_server_requests_seconds_count{app=~\"admin|data\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }} {{ "{{" }}status{{ "}}" }}",
+              "exemplar": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 3,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max", "sum"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 7,
+          "title": "Latencia P95 con exemplars (Capa 3)",
+          "description": "Percentil 95 por endpoint. Los exemplars permiten saltar de un pico de latencia a la traza del request individual que lo causo.",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 25 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (app, uri, le) (rate(http_server_requests_seconds_bucket{app=~\"admin|data\", uri!~\"/actuator.*\"}[$__rate_interval])))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }} {{ "{{" }}uri{{ "}}" }}",
+              "exemplar": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
         }
 
       ],
       "refresh": "30s",
       "schemaVersion": 39,
-      "tags": ["smart-campus", "tempo", "trazas", "latencia"],
+      "tags": ["smart-campus", "tempo", "trazas", "latencia", "exemplars", "capa3"],
       "templating": { "list": [] },
-      "time": { "from": "now-1h", "to": "now" },
+      "time": { "from": "now-30m", "to": "now" },
       "title": "Smart Campus - Trazas y latencia",
       "uid": "smart-campus-tempo",
-      "version": 5
+      "version": 6
     }
 {{- end }}
