@@ -471,6 +471,7 @@ prometheus:
       enable-feature: exemplar-storage
     extraFlags:
       - "web.enable-remote-write-receiver"
+      - "web.enable-lifecycle"
     global:
       external_labels:
         cluster: smart-campus-k3s
@@ -534,7 +535,7 @@ prometheus:
                 severity: critical
               annotations:
                 summary: "Heap JVM crítico"
-                description: "El heap de un microservicio está por encima del 90%. Riesgo de OutOfMemoryError."
+                description: "El heap de un microservicio está por encima del 3% durante 5 minutos. Umbral bajo configurado para validación experimental; en producción se elevaría al 85-90%."
 
             - alert: CPUAltaSostenida
               expr: avg by (app) (process_cpu_usage{app=~"admin|data"}) > 0.80
@@ -544,6 +545,7 @@ prometheus:
               annotations:
                 summary: "CPU alta sostenida"
                 description: "Un microservicio lleva 5 minutos usando más del 80% de CPU."
+
             - alert: ErroresHTTP
               expr: >
                 sum by (app, uri, status) (rate(http_server_requests_seconds_count{app=~"admin|data", status=~"4..|5.."}[5m]))
@@ -554,6 +556,17 @@ prometheus:
               annotations:
                 summary: "Errores HTTP detectados"
                 description: "Revisar labels app, uri y status para identificar el endpoint afectado."
+
+            - alert: LatenciaP95Alta
+              expr: >
+                histogram_quantile(0.95, sum by (app, uri, le) (rate(http_server_requests_seconds_bucket{app=~"admin|data", uri!~"/actuator.*"}[5m])))
+                > 0.5
+              for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: "Latencia P95 elevada"
+                description: "Un endpoint lleva 5 minutos con P95 superior a 500ms. Revisar labels app y uri para identificar el endpoint afectado."
 
   prometheus-pushgateway:
     enabled: false

@@ -107,7 +107,7 @@ data:
         {
           "id": 3,
           "title": "Heap JVM usado (%)",
-          "description": "Porcentaje de heap consumido por servicio. Umbral warning 70%, crítico 90%.",
+          "description": "Porcentaje de heap consumido. Umbrales bajos (warning 2%, critico 3%) para validacion experimental; en produccion se elevarian al 70/90%.",
           "type": "timeseries",
           "gridPos": { "h": 5, "w": 9, "x": 15, "y": 0 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -127,8 +127,8 @@ data:
                 "mode": "absolute",
                 "steps": [
                   { "color": "green",  "value": null },
-                  { "color": "orange", "value": 0.7  },
-                  { "color": "red",    "value": 0.9  }
+                  { "color": "orange", "value": 0.02  },
+                  { "color": "red",    "value": 0.03  }
                 ]
               },
               "custom": {
