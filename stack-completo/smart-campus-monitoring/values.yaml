@@ -573,4 +573,12 @@ prometheus:
   kube-state-metrics:
     enabled: false
   prometheus-node-exporter:
-    enabled: false
+    enabled: true
+    # Fix para WSL2: el rootfs mount no es 'shared/slave' por defecto en WSL,
+    # lo que rompe el container con error "path / is mounted on / but it is not
+    # a shared or slave mount". Deshabilitamos rootfs y filesystem collectors.
+    hostRootFsMount:
+      enabled: false
+    extraArgs:
+      - --no-collector.filesystem
+      - --no-collector.mountstats

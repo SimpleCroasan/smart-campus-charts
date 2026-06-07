@@ -10,18 +10,230 @@ data:
   smart-campus-overview.json: |
     {
       "annotations": { "list": [] },
-      "description": "Vista general del sistema Smart Campus UIS - logs, errores y actividad",
+      "description": "Vista ejecutiva del sistema Smart Campus UIS - recursos del nodo + actividad de logs",
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 1,
       "links": [],
       "panels": [
+
         {
           "id": 1,
-          "title": "Volumen de logs por minuto",
-          "description": "Tasa de generación de logs en el namespace smart-campus",
+          "title": "CPU del sistema",
+          "description": "Porcentaje de uso de CPU del nodo entero (todos los procesos). Mide saturacion real del host.",
+          "type": "stat",
+          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+              "legendFormat": "CPU",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "orange", "value": 60   },
+                  { "color": "red",    "value": 85   }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1,
+              "min": 0,
+              "max": 100
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["last"] }
+          }
+        },
+
+        {
+          "id": 2,
+          "title": "RAM utilizada",
+          "description": "Porcentaje de memoria RAM del nodo en uso.",
+          "type": "stat",
+          "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+              "legendFormat": "RAM",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "orange", "value": 70   },
+                  { "color": "red",    "value": 90   }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1,
+              "min": 0,
+              "max": 100
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["last"] }
+          }
+        },
+
+        {
+          "id": 3,
+          "title": "RAM disponible",
+          "description": "Memoria RAM libre del nodo en GB.",
+          "type": "stat",
+          "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "node_memory_MemAvailable_bytes / 1024 / 1024 / 1024",
+              "legendFormat": "GB",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red",    "value": null },
+                  { "color": "orange", "value": 2    },
+                  { "color": "green",  "value": 5    }
+                ]
+              },
+              "unit": "decgbytes",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "textMode": "value",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["last"] }
+          }
+        },
+
+        {
+          "id": 4,
+          "title": "Alertas activas",
+          "description": "Cantidad de alertas en estado pending o firing. 0 = sistema estable.",
+          "type": "stat",
+          "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "count(ALERTS{alertname=~\"ServicioCaido|MemoriaHeapCritica|CPUAltaSostenida|ErroresHTTP|LatenciaP95Alta\"}) or vector(0)",
+              "legendFormat": "Alertas",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "orange", "value": 1    },
+                  { "color": "red",    "value": 3    }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "textMode": "value_and_name",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["last"] }
+          }
+        },
+
+        {
+          "id": 5,
+          "title": "CPU: sistema vs procesos Java (comparativo)",
+          "description": "HALLAZGO METODOLOGICO: la metrica process_cpu_usage subestima la carga real del sistema. Durante stress tests, EMQX detecto 98% de CPU del nodo mientras process_cpu_usage solo reportaba ~5%. La linea roja (sistema) es la metrica recomendada para producion via node-exporter.",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)",
+              "legendFormat": "CPU sistema (node-exporter)",
+              "refId": "A"
+            },
+            {
+              "expr": "avg by (app) (process_cpu_usage{app=~\"admin|data\"}) * 100",
+              "legendFormat": "CPU proceso {{ "{{" }}app{{ "}}" }} (Java)",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "lineInterpolation": "smooth",
+                "showPoints": "never"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "CPU sistema (node-exporter)" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } },
+                  { "id": "custom.lineWidth", "value": 3 }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max", "mean"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 6,
+          "title": "Volumen de logs por minuto",
+          "description": "Tasa de generacion de logs y errores en el namespace smart-campus",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
@@ -30,7 +242,7 @@ data:
               "refId": "A"
             },
             {
-              "expr": "sum(rate({namespace=\"smart-campus\"} |= \"ERROR\" [$__interval]))",
+              "expr": "sum(rate({namespace=\"smart-campus\"} |~ \"(?i)(error|exception|fatal|panic)\" !~ \"monitoring-alloy-otlp|okhttp3\" [$__interval]))",
               "legendFormat": "Errores/min",
               "refId": "B"
             }
@@ -39,24 +251,11 @@ data:
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
                 "drawStyle": "line",
                 "fillOpacity": 10,
-                "gradientMode": "none",
-                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
                 "lineInterpolation": "smooth",
                 "lineWidth": 2,
-                "pointSize": 5,
-                "scaleDistribution": { "type": "linear" },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": { "group": "A", "mode": "none" },
-                "thresholdsStyle": { "mode": "off" }
+                "showPoints": "never"
               },
               "unit": "short"
             }
@@ -66,16 +265,17 @@ data:
             "tooltip": { "mode": "multi", "sort": "desc" }
           }
         },
+
         {
-          "id": 2,
+          "id": 7,
           "title": "Errores por servicio",
-          "description": "Cantidad de errores agrupados por aplicación en el rango seleccionado",
+          "description": "Cantidad de errores por aplicacion. Detecta error|exception|fatal|panic (case-insensitive) excluyendo ruido conocido.",
           "type": "barchart",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\".+\"} |= \"ERROR\" !~ \"monitoring-alloy-otlp|okhttp3|java\\\\.base\" [$__range]))",
+              "expr": "sum by (app) (count_over_time({namespace=\"smart-campus\", app=~\".+\"} |~ \"(?i)(error|exception|fatal|panic)\" !~ \"monitoring-alloy-otlp|okhttp3|java\\\\.base|atlasVersion|getParameter\" [$__range]))",
               "legendFormat": "{{ "{{" }}app{{ "}}" }}",
               "refId": "A",
               "instant": true
@@ -94,12 +294,13 @@ data:
             "barWidth": 0.8
           }
         },
+
         {
-          "id": 3,
-          "title": "Distribución de logs por pod",
-          "description": "Proporción de logs generados por cada pod en el rango seleccionado",
+          "id": 8,
+          "title": "Distribucion de logs por pod",
+          "description": "Proporcion de logs generados por cada pod en el rango seleccionado",
           "type": "piechart",
-          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 21 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
@@ -119,12 +320,13 @@ data:
             "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
           }
         },
+
         {
-          "id": 4,
-          "title": "Estadísticas rápidas",
-          "description": "Contadores de logs en el rango seleccionado",
+          "id": 9,
+          "title": "Total de logs",
+          "description": "Contador total de logs en el rango seleccionado",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 8 },
+          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 21 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
@@ -140,9 +342,9 @@ data:
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  { "color": "green", "value": null },
-                  { "color": "yellow", "value": 5000 },
-                  { "color": "red", "value": 10000 }
+                  { "color": "green",  "value": null   },
+                  { "color": "yellow", "value": 50000  },
+                  { "color": "red",    "value": 200000 }
                 ]
               },
               "unit": "short"
@@ -153,20 +355,21 @@ data:
             "graphMode": "none",
             "justifyMode": "center",
             "orientation": "horizontal",
-            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+            "reduceOptions": { "calcs": ["sum"] },
             "textMode": "auto"
           }
         },
+
         {
-          "id": 5,
+          "id": 10,
           "title": "Errores totales",
-          "description": "Errores en el rango seleccionado",
+          "description": "Errores acumulados en el rango seleccionado.",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 12 },
+          "gridPos": { "h": 4, "w": 8, "x": 8, "y": 25 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
-              "expr": "sum(count_over_time({namespace=\"smart-campus\"} |= \"ERROR\" !~ \"monitoring-alloy-otlp|okhttp3|java\\\\.base\" [$__range]))",
+              "expr": "sum(count_over_time({namespace=\"smart-campus\"} |~ \"(?i)(error|exception|fatal|panic)\" !~ \"monitoring-alloy-otlp|okhttp3|java\\\\.base|atlasVersion|getParameter\" [$__range])) or vector(0)",
               "legendFormat": "Errores",
               "refId": "A",
               "instant": true
@@ -178,9 +381,9 @@ data:
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  { "color": "green", "value": null },
-                  { "color": "yellow", "value": 10 },
-                  { "color": "red", "value": 50 }
+                  { "color": "green",  "value": null },
+                  { "color": "yellow", "value": 10   },
+                  { "color": "red",    "value": 50   }
                 ]
               },
               "unit": "short"
@@ -191,16 +394,17 @@ data:
             "graphMode": "none",
             "justifyMode": "center",
             "orientation": "horizontal",
-            "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+            "reduceOptions": { "calcs": ["sum"] },
             "textMode": "auto"
           }
         },
+
         {
-          "id": 6,
+          "id": 11,
           "title": "Actividad de logs por servicio",
-          "description": "Actividad por aplicación a lo largo del tiempo",
+          "description": "Actividad por aplicacion a lo largo del tiempo. Nota: EMQX emite alarmas internas de uso de CPU del sistema (visible en el panel comparativo de CPU).",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 21 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
@@ -216,8 +420,7 @@ data:
                 "drawStyle": "line",
                 "fillOpacity": 10,
                 "lineInterpolation": "smooth",
-                "lineWidth": 2,
-                "stacking": { "group": "A", "mode": "none" }
+                "lineWidth": 2
               },
               "unit": "short"
             }
@@ -226,12 +429,13 @@ data:
             "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }
           }
         },
+
         {
-          "id": 7,
-          "title": "Últimos errores y warnings",
+          "id": 12,
+          "title": "Ultimos errores y warnings",
           "description": "Logs recientes con nivel ERROR o WARN",
           "type": "logs",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 29 },
           "datasource": { "type": "loki", "uid": "${datasource}" },
           "targets": [
             {
@@ -250,10 +454,11 @@ data:
             "wrapLogMessage": true
           }
         }
+
       ],
       "refresh": "30s",
       "schemaVersion": 39,
-      "tags": ["smart-campus", "loki", "overview"],
+      "tags": ["smart-campus", "overview", "executive", "node-exporter"],
       "templating": {
         "list": [
           {
@@ -278,6 +483,6 @@ data:
       "timezone": "browser",
       "title": "Smart Campus - Overview",
       "uid": "smart-campus-overview",
-      "version": 1
+      "version": 4
     }
 {{- end }}
