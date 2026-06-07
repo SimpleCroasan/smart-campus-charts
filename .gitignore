@@ -1,0 +1,5 @@
+
+# Backups de archivos durante edicion
+*.bak
+*.bak.*
+*.bak[0-9]*

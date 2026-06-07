@@ -66,7 +66,7 @@ data:
         {
           "id": 2,
           "title": "CPU del proceso Java",
-          "description": "Uso de CPU promedio por servicio. Umbral warning 60%, crítico 80%.",
+          "description": "Uso de CPU promedio por servicio. Umbrales bajos (warning 1%, critico 2%) para validacion experimental; en produccion se elevarian a 60/80%.",
           "type": "timeseries",
           "gridPos": { "h": 5, "w": 9, "x": 6, "y": 0 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -86,15 +86,16 @@ data:
                 "mode": "absolute",
                 "steps": [
                   { "color": "green",  "value": null },
-                  { "color": "orange", "value": 0.6  },
-                  { "color": "red",    "value": 0.8  }
+                  { "color": "orange", "value": 0.01  },
+                  { "color": "red",    "value": 0.02  }
                 ]
               },
               "custom": {
                 "lineWidth": 2,
                 "fillOpacity": 12,
                 "lineInterpolation": "smooth",
-                "showPoints": "never"
+                "showPoints": "never",
+                "thresholdsStyle": { "mode": "line" }
               }
             }
           },
@@ -107,7 +108,7 @@ data:
         {
           "id": 3,
           "title": "Heap JVM usado (%)",
-          "description": "Porcentaje de heap consumido. Umbrales bajos (warning 2%, critico 3%) para validacion experimental; en produccion se elevarian al 70/90%.",
+          "description": "Porcentaje de heap consumido. Umbrales bajos (warning 0.3%, critico 0.5%) para validacion experimental; en produccion se elevarian al 70/90%.",
           "type": "timeseries",
           "gridPos": { "h": 5, "w": 9, "x": 15, "y": 0 },
           "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -127,15 +128,16 @@ data:
                 "mode": "absolute",
                 "steps": [
                   { "color": "green",  "value": null },
-                  { "color": "orange", "value": 0.02  },
-                  { "color": "red",    "value": 0.03  }
+                  { "color": "orange", "value": 0.003 },
+                  { "color": "red",    "value": 0.005 }
                 ]
               },
               "custom": {
                 "lineWidth": 2,
                 "fillOpacity": 12,
                 "lineInterpolation": "smooth",
-                "showPoints": "never"
+                "showPoints": "never",
+                "thresholdsStyle": { "mode": "line" }
               }
             }
           },
@@ -184,10 +186,52 @@ data:
 
         {
           "id": 5,
+          "title": "Latencia P95 por endpoint",
+          "description": "Percentil 95 de latencia por endpoint, excluyendo actuator. Umbrales bajos (warning 1.5ms, critico 2ms) para validacion experimental; en produccion se elevarian a 300/500ms.",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 24, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (app, uri, le) (rate(http_server_requests_seconds_bucket{app=~\"admin|data\", uri!~\"/actuator.*\"}[5m])))",
+              "legendFormat": "{{ "{{" }}app{{ "}}" }} {{ "{{" }}uri{{ "}}" }}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 3,
+              "min": 0,
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "orange", "value": 0.0015 },
+                  { "color": "red",    "value": 0.002 }
+                ]
+              },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "thresholdsStyle": { "mode": "line" }
+              }
+            }
+          },
+          "options": {
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["last", "max"] },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          }
+        },
+
+        {
+          "id": 6,
           "title": "Alertas activas",
-          "description": "Alertas en estado firing o pending. Sin alertas = sistema estable.",
+          "description": "Alertas en estado firing o pending. Sin alertas = sistema estable. Nota: los pills de labels usan el coloreado automatico de Grafana (asignado por nombre de label, no por valor).",
           "type": "alertlist",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 19 },
           "datasource": { "type": "alertmanager", "uid": "alertmanager" },
           "options": {
             "groupMode": "default",
@@ -202,16 +246,68 @@ data:
             },
             "alertInstanceLabelFilter": "{app=~\"admin|data\"}"
           }
+        },
+
+        {
+          "id": 7,
+          "title": "Historico de alertas (timeline)",
+          "description": "Linea temporal por alerta. Naranja = pending. Rojo = firing. Vacio = inactive.",
+          "type": "state-timeline",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 25 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "(ALERTS{alertname=~\"ServicioCaido|MemoriaHeapCritica|CPUAltaSostenida|ErroresHTTP|LatenciaP95Alta\", alertstate=\"firing\"}) * 2 or (ALERTS{alertname=~\"ServicioCaido|MemoriaHeapCritica|CPUAltaSostenida|ErroresHTTP|LatenciaP95Alta\", alertstate=\"pending\"}) * 1",
+              "legendFormat": "{{ "{{" }}alertname{{ "}}" }} ({{ "{{" }}app{{ "}}" }})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "custom": {
+                "lineWidth": 0,
+                "fillOpacity": 100
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "1": { "text": "PENDING", "color": "orange", "index": 0 },
+                    "2": { "text": "FIRING",  "color": "red",    "index": 1 }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "transparent", "value": null },
+                  { "color": "orange", "value": 1 },
+                  { "color": "red", "value": 2 }
+                ]
+              },
+              "min": 0,
+              "max": 2
+            }
+          },
+          "options": {
+            "mergeValues": false,
+            "showValue": "never",
+            "alignValue": "left",
+            "rowHeight": 0.9,
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false },
+            "tooltip": { "mode": "single", "sort": "none" }
+          }
         }
 
       ],
       "refresh": "30s",
       "schemaVersion": 39,
-      "tags": ["smart-campus", "alerts", "prometheus"],
+      "tags": ["smart-campus", "alerts", "prometheus", "capa4"],
       "templating": { "list": [] },
       "time": { "from": "now-1h", "to": "now" },
       "title": "Smart Campus - Alertas y rendimiento",
       "uid": "smart-campus-alerts",
-      "version": 10
+      "version": 15
     }
 {{- end }}

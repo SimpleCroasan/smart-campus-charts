@@ -1,0 +1,4 @@
+# Logs de ejecucion de los scripts de validacion
+# Los scripts pueden re-ejecutarse cuando se necesite, los logs son artefactos.
+*.log
+logs/

@@ -529,22 +529,22 @@ prometheus:
                 sum by (app) (jvm_memory_used_bytes{area="heap", app=~"admin|data"})
                 /
                 sum by (app) (clamp_min(jvm_memory_max_bytes{area="heap", app=~"admin|data"}, 1))
-                > 0.03
+                > 0.005
               for: 5m
               labels:
                 severity: critical
               annotations:
                 summary: "Heap JVM crítico"
-                description: "El heap de un microservicio está por encima del 3% durante 5 minutos. Umbral bajo configurado para validación experimental; en producción se elevaría al 85-90%."
+                description: "El heap de un microservicio está por encima del 0.5% durante 5 minutos. Umbral bajo configurado para validacion experimental (heap real medido entre 0.7-1.5%); en produccion se elevaria al 85-90%."
 
             - alert: CPUAltaSostenida
-              expr: avg by (app) (process_cpu_usage{app=~"admin|data"}) > 0.80
+              expr: avg by (app) (process_cpu_usage{app=~"admin|data"}) > 0.02
               for: 5m
               labels:
                 severity: warning
               annotations:
                 summary: "CPU alta sostenida"
-                description: "Un microservicio lleva 5 minutos usando más del 80% de CPU."
+                description: "Un microservicio lleva 5 minutos usando mas del 2% de CPU. Umbral bajo configurado para validacion experimental (CPU real bajo carga: ~5%); en produccion se elevaria al 80%."
 
             - alert: ErroresHTTP
               expr: >
@@ -552,7 +552,7 @@ prometheus:
                 > 0.1
               for: 2m
               labels:
-                severity: warning
+                severity: critical
               annotations:
                 summary: "Errores HTTP detectados"
                 description: "Revisar labels app, uri y status para identificar el endpoint afectado."
@@ -560,13 +560,13 @@ prometheus:
             - alert: LatenciaP95Alta
               expr: >
                 histogram_quantile(0.95, sum by (app, uri, le) (rate(http_server_requests_seconds_bucket{app=~"admin|data", uri!~"/actuator.*"}[5m])))
-                > 0.5
+                > 0.002
               for: 5m
               labels:
                 severity: warning
               annotations:
                 summary: "Latencia P95 elevada"
-                description: "Un endpoint lleva 5 minutos con P95 superior a 500ms. Revisar labels app y uri para identificar el endpoint afectado."
+                description: "Un endpoint lleva 5 minutos con P95 superior a 2ms. Umbral bajo configurado para validacion experimental; en produccion se elevaria a 500ms. Revisar labels app y uri para identificar el endpoint afectado."
 
   prometheus-pushgateway:
     enabled: false
