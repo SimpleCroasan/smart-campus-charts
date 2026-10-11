@@ -1,20 +1,4 @@
 services:
-  postgres:
-    image: postgres:16
-    restart: always
-    shm_size: 128mb
-    env_file: .env
-    ports:
-     - 5432:5432
-    environment:
-      - POSTGRES_USER=${POSTGRESQL_USER}
-      - POSTGRES_DB=${POSTGRESQL_DB}
-      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD}
-    volumes:
-    - ./data/postgres-data:/var/lib/postgresql/data
-    networks:
-      - iot_campus_uis
-
   influxdb:
     image: influxdb:2.7.11
     restart: always
@@ -99,18 +83,44 @@ services:
     networks:
       - iot_campus_uis
 
+  mysql:
+    image: mysql:8.4
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    # ports:
+    #   - 3306:3306   # descomentar solo si necesitas conectarte desde el host
+    volumes:
+      - ./data/mysql/data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - iot_campus_uis
+
   admin:
-    image: semillerocage/admin-service:1.0
+    image: ${DOCKERHUB_USER:-semillerocage}/admin-service:${ADMIN_TAG:-1.5}
     restart: always
     depends_on:
-      - postgres
+      mysql:
+        condition: service_healthy
     environment:
-      - POSTGRESQL_HOST=postgres
-      - POSTGRESQL_PORT=${POSTGRESQL_PORT}
-      - POSTGRESQL_DB=${POSTGRESQL_DB}
-      - POSTGRESQL_USER=${POSTGRESQL_USER}
-      - POSTGRESQL_PASSWORD=${POSTGRESQL_PASSWORD}
-      - ADMIN_SERVICE_PORT=${ADMIN_SERVICE_PORT}
+      - PORT=${ADMIN_SERVICE_PORT}
+      - "DATABASE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+      - DATABASE_USERNAME=${MYSQL_USER}
+      - DATABASE_PASSWORD=${MYSQL_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      # No hay colector OTel en este compose: se apaga el SDK del agente para evitar avisos de conexion
+      - OTEL_SDK_DISABLED=true
     networks:
       - iot_campus_uis
 
@@ -170,11 +180,13 @@ services:
 
   frontend:
     restart: always
-    image: semillerocage/front-end-admin:1.0
+    image: ${DOCKERHUB_USER:-semillerocage}/front-end-admin:${FRONTEND_TAG:-1.1}
     depends_on:
       - admin
       - gateway
       - data
+    environment:
+      - BACKEND_URL=http://admin:${ADMIN_SERVICE_PORT}
     ports:
       - 4000:80
     networks:
