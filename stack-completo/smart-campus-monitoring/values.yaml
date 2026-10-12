@@ -300,7 +300,7 @@ alloy:
             type = "string_attribute"
             string_attribute {
               key          = "http.route"
-              values       = ["/actuator/health", "/actuator/prometheus", "/actuator/health/liveness", "/actuator/health/readiness"]
+              values       = ["/actuator/health", "/actuator/prometheus", "/actuator/health/liveness", "/actuator/health/readiness", "/api/actuator/health", "/api/actuator/prometheus", "/api/actuator/health/liveness", "/api/actuator/health/readiness"]
               invert_match = true
             }
           }
