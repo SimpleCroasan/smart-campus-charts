@@ -1,6 +1,6 @@
 # ── Perfil personalizado ──────────────────────────────────────────
 # Cambia true/false según lo que necesites levantar
-postgres:
+mysql:
   enabled: true
 mongo:
   enabled: true
@@ -26,10 +26,10 @@ adminService:
   enabled: true
   imageSource: remote
   image: semillerocage/admin-service
-  tag: "1.4"
+  tag: "1.6"
 
 frontendAdmin:
   enabled: true
-  imageSource: local
-  image: frontend-admin
-  tag: latest
+  imageSource: remote
+  image: semillerocage/front-end-admin
+  tag: "1.1"

@@ -1,8 +1,9 @@
 # ── Credenciales ──────────────────────────────────────────────────
-postgres:
+mysql:
   enabled: true
-  user: postgres
+  user: admin
   password: IoTPass1234
+  rootPassword: IoTRootPass1234
   db: iot
 
 mongo:
@@ -53,17 +54,18 @@ imageSource: remote
 dataService:
   enabled: true
   image: semillerocage/data-service
-  tag: "1.2"
+  tag: "1.5"
   imageSource: remote
 
 adminService:
   enabled: true
   image: semillerocage/admin-service
-  tag: "1.2"
+  tag: "1.6"
+  jwtSecret: change_this_to_a_long_random_secret
   imageSource: remote
 
 frontendAdmin:
   enabled: true
   image: semillerocage/front-end-admin
-  tag: "1.0"
+  tag: "1.1"
   imageSource: remote

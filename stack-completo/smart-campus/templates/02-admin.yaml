@@ -36,13 +36,13 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8081"
-        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/path: "/api/actuator/prometheus"
     spec:
       initContainers:
-        {{- if .Values.postgres.enabled }}
-        - name: wait-for-postgres
+        {{- if .Values.mysql.enabled }}
+        - name: wait-for-mysql
           image: busybox
-          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
+          command: ['sh', '-c', 'until nc -z mysql 3306; do echo waiting for mysql; sleep 2; done']
         {{- end }}
       containers:
         - name: admin
@@ -52,27 +52,28 @@ spec:
           ports:
             - containerPort: 8081
           env:
-            - name: ADMIN_SERVICE_PORT
+            - name: PORT
               value: "8081"
-            - name: POSTGRESQL_HOST
-              value: postgres
-            - name: POSTGRESQL_PORT
-              value: "5432"
-            - name: POSTGRESQL_DB
+            - name: DATABASE_URL
+              value: "jdbc:mysql://mysql:3306/{{ .Values.mysql.db }}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+            - name: DATABASE_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: db-credentials
-                  key: POSTGRESQL_DB
-            - name: POSTGRESQL_USER
+                  key: MYSQL_USER
+            - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: db-credentials
-                  key: POSTGRESQL_USER
-            - name: POSTGRESQL_PASSWORD
+                  key: MYSQL_PASSWORD
+            - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: db-credentials
-                  key: POSTGRESQL_PASSWORD
+                  key: JWT_SECRET
+            # Expone los endpoints que usan las probes y el scrape de Prometheus
+            - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+              value: "health,info,prometheus"
             # ── OpenTelemetry — trazas distribuidas ───────────────
             # El agente Java (incluido en el Dockerfile) usa estas variables
             # para configurar el exportador OTLP sin modificar el código.
@@ -98,7 +99,7 @@ spec:
               value: "service.namespace=smart-campus,deployment.environment=thesis"
           livenessProbe:
             httpGet:
-              path: /actuator/health
+              path: /api/actuator/health
               port: 8081
             initialDelaySeconds: 60
             periodSeconds: 20
@@ -106,7 +107,7 @@ spec:
             failureThreshold: 5
           readinessProbe:
             httpGet:
-              path: /actuator/health
+              path: /api/actuator/health
               port: 8081
             initialDelaySeconds: 40
             periodSeconds: 15

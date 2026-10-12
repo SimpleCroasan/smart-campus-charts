@@ -1,6 +1,7 @@
 # Credenciales más seguras para producción
-postgres:
-  password: "PgProd$2024!Secure"
+mysql:
+  password: "o8RdZ5fYQwbOBVrVkBYaTfKE"
+  rootPassword: "yrJpwlTBFuqxlEF71ssULXDS"
 
 mongo:
   password: "MongoProd$2024!Secure"
@@ -20,4 +21,5 @@ dataService:
   tag: v1.0.0
 
 adminService:
-  tag: v1.0.0
+  tag: "1.6"
+  jwtSecret: "7be7d0bc2265b63f33ab97581a6ae7a04a2829fbebca5e3ab5f14b08d1114958"
