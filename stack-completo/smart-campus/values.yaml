@@ -60,7 +60,7 @@ dataService:
 adminService:
   enabled: true
   image: semillerocage/admin-service
-  tag: "1.7"
+  tag: "1.8"
   jwtSecret: change_this_to_a_long_random_secret
   imageSource: remote
 
