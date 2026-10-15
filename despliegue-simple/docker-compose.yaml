@@ -108,7 +108,7 @@ services:
       - iot_campus_uis
 
   admin:
-    image: ${DOCKERHUB_USER:-semillerocage}/admin-service:${ADMIN_TAG:-1.5}
+    image: ${DOCKERHUB_USER:-semillerocage}/admin-service:${ADMIN_TAG:-2.0}
     restart: always
     depends_on:
       mysql:
