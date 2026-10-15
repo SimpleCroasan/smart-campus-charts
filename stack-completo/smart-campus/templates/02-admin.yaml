@@ -71,6 +71,11 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: JWT_SECRET
+            # ── Broker MQTT (EMQX local del cluster) ──────────────
+            # EMQX corre sin autenticación (igual que data-service), por eso
+            # no se pasan MQTT_USERNAME / MQTT_PASSWORD.
+            - name: MQTT_BROKER_URL
+              value: "tcp://emqx:1883"
             # Expone los endpoints que usan las probes y el scrape de Prometheus
             - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
               value: "health,info,prometheus"
