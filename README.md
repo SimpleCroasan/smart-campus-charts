@@ -1,4 +1,5 @@
 # Smart Campus UIS — Despliegue en K3s
+# Smart Campus UIS — Despliegue en K3s
 
 Este repositorio contiene los Helm charts para desplegar la plataforma **Smart Campus** sobre **K3s** (Kubernetes ligero).
 
@@ -17,6 +18,15 @@ El documento tiene tres partes:
 
 > [!NOTE]
 > En toda la guía `kubectl` se ejecuta como `k3s kubectl`.
+
+## Despliegue simple (Docker Compose)
+
+Si no quieres usar K3s, existe un despliegue simple en la carpeta `despliegue-simple/`. Solo tienes que entrar a la carpeta y ejecutar:
+
+```bash
+cd despliegue-simple
+docker compose up -d
+```
 
 ---
 
