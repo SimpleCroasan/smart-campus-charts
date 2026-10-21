@@ -1,4 +1,4 @@
-# Smart Campus UIS — Despliegue en K3s
+
 # Smart Campus UIS — Despliegue en K3s
 
 Este repositorio contiene los Helm charts para desplegar la plataforma **Smart Campus** sobre **K3s** (Kubernetes ligero).
